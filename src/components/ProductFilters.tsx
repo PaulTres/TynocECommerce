@@ -81,6 +81,7 @@ export function ProductFilters({ categories, values }: Props) {
             </label>
             <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-5">
                 <button className="btn-primary">Apply filters</button>
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
                 <a href="/products" className="btn-secondary">
                     Clear
                 </a>
