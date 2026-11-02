@@ -1,6 +1,6 @@
 /**
  * Loads sample categories and products. Run: pnpm run db:seed
- * Uses PutItem (upsert), so re-running refreshes the catalogue without duplicates.
+ * Uses Prisma upserts, so re-running refreshes the catalogue without duplicates.
  * Images use picsum.photos with a per-product seed so each product gets a stable picture.
  */
 import { putCategory } from "../src/lib/db/categories.repo";

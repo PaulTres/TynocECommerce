@@ -83,7 +83,8 @@ export function ProductFilters({ categories, values }: Props) {
                 <button className="btn-primary">Apply filters</button>
                 {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
                 <a href="/products" className="btn-secondary">
-                    Clear
+                    Clear{" "}
+                    {/**Used to load a fresh page with all filters cleared. */}
                 </a>
             </div>
         </form>

@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime       @default(now())
+  cartItems    CartItem[]
+  wishlist     WishlistItem[]
+}
+
+model Category {
+  slug        String    @id
+  name        String
+  description String
+  imageUrl    String
+  products    Product[]
+}
+
+model Product {
+  id          String         @id
+  name        String
+  description String
+  priceCents  Int
+  currency    String         @default("USD")
+  categorySlug String
+  category    Category       @relation(fields: [categorySlug], references: [slug], onDelete: Restrict)
+  images      String[]
+  stock       Int
+  tags        String[]
+  featured    Boolean        @default(false)
+  createdAt   DateTime
+  cartItems   CartItem[]
+  wishlist    WishlistItem[]
+
+  @@index([categorySlug, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([priceCents])
+}
+
+model CartItem {
+  userId    String
+  productId String
+  quantity  Int
+  addedAt   DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([userId, productId])
+  @@index([productId])
+}
+
+model WishlistItem {
+  userId    String
+  productId String
+  addedAt   DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([userId, productId])
+  @@index([productId])
+}

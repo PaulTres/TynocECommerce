@@ -1,192 +1,65 @@
-import { API_LIMIT, MAX_QUERY_ROUNDS, PAGE_SIZE } from "@/lib/constants";
+import { API_LIMIT, PAGE_SIZE } from "@/lib/constants";
+import { ValidationError } from "@/lib/errors";
 import type { Page, Product, ProductQuery } from "@/types";
-import {
-    BatchGetCommand,
-    type BatchGetCommandOutput,
-    GetCommand,
-    PutCommand,
-    QueryCommand,
-} from "@aws-sdk/lib-dynamodb";
-import { getEnv } from "../env";
-import { getDb, getTableName } from "./client";
-import { chunk, decodeCursor, encodeCursor } from "./helpers";
-import { ALL_PRODUCTS_PK, categoryProductsPk, keys, stripKeys } from "./keys";
+import { db } from "./client";
 
-/**
- * Converts a Product into a DynamoDB item with key and index attributes.
- * - GSI1 groups products by category (newest first via the timestamp-prefixed sort key).
- * - GSI2 lists all products newest first.
- * - `searchText` is a lower-cased blob used by the naive contains() search.
- */
-function toItem(p: Product): Record<string, unknown> {
-    const sortKey = `${p.createdAt}#${p.id}`;
-    return {
-        ...keys.product(p.id),
-        entityType: "PRODUCT",
-        GSI1PK: categoryProductsPk(p.categorySlug),
-        GSI1SK: sortKey,
-        GSI2PK: ALL_PRODUCTS_PK,
-        GSI2SK: sortKey,
-        searchText:
-            `${p.name} ${p.description} ${p.tags.join(" ")}`.toLowerCase(),
-        ...p,
-    };
+function decodeCursor(cursor?: string): string | undefined {
+    if (!cursor) return undefined;
+    try {
+        const id: unknown = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
+        if (typeof id === "string" && id.length > 0) return id;
+    } catch { /* return the validation error below */ }
+    throw new ValidationError("Invalid pagination cursor");
 }
 
-/** Fetches a single product by id (O(1) key lookup) or null. */
+function encodeCursor(id?: string): string | null {
+    return id ? Buffer.from(JSON.stringify(id), "utf8").toString("base64url") : null;
+}
+
+function toProduct(row: { id: string; name: string; description: string; priceCents: number; currency: string; categorySlug: string; images: string[]; stock: number; tags: string[]; featured: boolean; createdAt: Date }): Product {
+    return { ...row, currency: "USD", createdAt: row.createdAt.toISOString() };
+}
+
 export async function getProduct(id: string): Promise<Product | null> {
-    const res = await getDb().send(
-        new GetCommand({ TableName: getTableName(), Key: keys.product(id) }),
-    );
-    return res.Item ? stripKeys<Product>(res.Item) : null;
+    const product = await db.product.findUnique({ where: { id } });
+    return product ? toProduct(product) : null;
 }
 
-/**
- * Fetches many products in as few requests as possible.
- * Use BatchGet in chunks of 100 (the API limit); unprocessed keys are retried with a small backoff.
- * Missing ids are simply absent from the result - callers decide how to handle them.
- */
 export async function batchGetProducts(ids: string[]): Promise<Product[]> {
-    const unique = [...new Set(ids)];
-    const TableName = getTableName();
-    const found: Product[] = [];
-
-    for (const group of chunk(unique, API_LIMIT)) {
-        let pending: Record<string, unknown>[] | undefined = group.map((id) =>
-            keys.product(id),
-        );
-        for (
-            let attempt = 0;
-            pending && pending.length > 0 && attempt < MAX_QUERY_ROUNDS - 1;
-            attempt++
-        ) {
-            if (attempt > 0)
-                await new Promise((r) => setTimeout(r, API_LIMIT ** attempt)); // exponential backoff
-            const res: BatchGetCommandOutput = await getDb().send(
-                new BatchGetCommand({
-                    RequestItems: {
-                        [TableName]: {
-                            Keys: pending as Record<string, string>[],
-                        },
-                    },
-                }),
-            );
-            for (const item of res.Responses?.[TableName] ?? [])
-                found.push(stripKeys<Product>(item));
-            pending = res.UnprocessedKeys?.[TableName]?.Keys;
-        }
-    }
-    return found;
+    if (!ids.length) return [];
+    const rows = await db.product.findMany({ where: { id: { in: [...new Set(ids)] } } });
+    return rows.map(toProduct);
 }
 
-/**
- * Lists products with optional category, text and price filters.
- * Picks the cheapest index for the request (GSI1 when a category is given, else GSI2),
- * then applies search/price as a FilterExpression. Because filters run after the read,
- * a single DynamoDB page may contain fewer matches than requested, so we loop (bounded) until
- * the page is full. The cursor always points at the last item actually returned.
- * Limitations: contains() search scans the partition - OpenSearch/Algolia may be needed for larger tables; price sorting is applied per page only.
- */
 export async function queryProducts(q: ProductQuery): Promise<Page<Product>> {
     const limit = q.limit ?? PAGE_SIZE;
-    const useCategory = Boolean(q.categorySlug);
-    const indexName = useCategory ? getEnv().GSI1 : getEnv().GSI2;
-    const pkAttr = useCategory ? `${indexName}PK` : `${indexName}PK`;
-    const skAttr = useCategory ? `${indexName}SK` : `${indexName}SK`;
-
-    const filters: string[] = [];
-    const values: Record<string, unknown> = {
-        ":pk": useCategory
-            ? categoryProductsPk(q.categorySlug as string)
-            : ALL_PRODUCTS_PK,
+    const afterId = decodeCursor(q.cursor);
+    const where = {
+        ...(q.categorySlug ? { categorySlug: q.categorySlug } : {}),
+        ...(q.search ? { OR: [
+            { name: { contains: q.search.trim(), mode: "insensitive" as const } },
+            { description: { contains: q.search.trim(), mode: "insensitive" as const } },
+            { tags: { has: q.search.trim().toLowerCase() } },
+        ] } : {}),
+        ...(q.minPriceCents !== undefined || q.maxPriceCents !== undefined ? { priceCents: { ...(q.minPriceCents !== undefined ? { gte: q.minPriceCents } : {}), ...(q.maxPriceCents !== undefined ? { lte: q.maxPriceCents } : {}) } } : {}),
     };
-    if (q.search) {
-        filters.push("contains(searchText, :search)");
-        values[":search"] = q.search.toLowerCase().trim();
-    }
-    if (q.minPriceCents !== undefined) {
-        filters.push("priceCents >= :min");
-        values[":min"] = q.minPriceCents;
-    }
-    if (q.maxPriceCents !== undefined) {
-        filters.push("priceCents <= :max");
-        values[":max"] = q.maxPriceCents;
-    }
-
-    const collected: Record<string, unknown>[] = [];
-    let lastKey: Record<string, unknown> | undefined = decodeCursor(q.cursor);
-
-    for (let round = 0; round < MAX_QUERY_ROUNDS; round++) {
-        const res = await getDb().send(
-            new QueryCommand({
-                TableName: getTableName(),
-                IndexName: indexName,
-                KeyConditionExpression: `${pkAttr} = :pk`,
-                FilterExpression: filters.length
-                    ? filters.join(" AND ")
-                    : undefined,
-                ExpressionAttributeValues: values,
-                ExclusiveStartKey: lastKey,
-                ScanIndexForward: false, // newest first
-                Limit: API_LIMIT / 2, // items *evaluated* per round (filters apply afterwards)
-            }),
-        );
-        collected.push(...(res.Items ?? []));
-        lastKey = res.LastEvaluatedKey;
-        if (!lastKey || collected.length >= limit) break;
-    }
-
-    // If we over-collected, trim and rewind the cursor to the last item we actually return.
-    let nextKey = lastKey;
-    if (collected.length > limit) {
-        collected.length = limit;
-        const last = collected[limit - 1] as Record<string, unknown>;
-        nextKey = {
-            PK: last.PK,
-            SK: last.SK,
-            [pkAttr]: last[pkAttr],
-            [skAttr]: last[skAttr],
-        };
-    }
-
-    let items = collected.map((i) => stripKeys<Product>(i));
-    if (q.sort === "price-asc")
-        items = items.sort((a, b) => a.priceCents - b.priceCents);
-    if (q.sort === "price-desc")
-        items = items.sort((a, b) => b.priceCents - a.priceCents);
-
-    return { items, nextCursor: encodeCursor(nextKey) };
+    const orderBy = q.sort === "price-asc" ? [{ priceCents: "asc" as const }, { id: "asc" as const }]
+        : q.sort === "price-desc" ? [{ priceCents: "desc" as const }, { id: "asc" as const }]
+        : [{ createdAt: "desc" as const }, { id: "desc" as const }];
+    const cursor = afterId ? await db.product.findUnique({ where: { id: afterId }, select: { id: true } }) : null;
+    if (afterId && !cursor) throw new ValidationError("Invalid pagination cursor");
+    const rows = await db.product.findMany({ where, orderBy, take: Math.min(limit, API_LIMIT) + 1, ...(cursor ? { cursor: { id: cursor.id }, skip: 1 } : {}) });
+    const hasMore = rows.length > Math.min(limit, API_LIMIT);
+    const items = rows.slice(0, Math.min(limit, API_LIMIT)).map(toProduct);
+    return { items, nextCursor: hasMore ? encodeCursor(items.at(-1)?.id) : null };
 }
 
-/**
- * Returns up to `limit` other products from the same category.
- * queries GSI1 for the category (newest first) and drops the current product.
- */
-export async function getRelated(
-    product: Product,
-    limit = 4,
-): Promise<Product[]> {
-    const res = await getDb().send(
-        new QueryCommand({
-            TableName: getTableName(),
-            IndexName: "GSI1",
-            KeyConditionExpression: "GSI1PK = :pk",
-            ExpressionAttributeValues: {
-                ":pk": categoryProductsPk(product.categorySlug),
-            },
-            ScanIndexForward: false,
-            Limit: limit + 1, // +1 because the product itself may be in the result
-        }),
-    );
-    return (res.Items ?? [])
-        .map((i) => stripKeys<Product>(i))
-        .filter((p) => p.id !== product.id)
-        .slice(0, limit);
+export async function getRelated(product: Product, limit = 4): Promise<Product[]> {
+    const rows = await db.product.findMany({ where: { categorySlug: product.categorySlug, id: { not: product.id } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: limit });
+    return rows.map(toProduct);
 }
 
-/** Creates or replaces a product (admin/seed use). */
 export async function putProduct(product: Product): Promise<void> {
-    await getDb().send(
-        new PutCommand({ TableName: getTableName(), Item: toItem(product) }),
-    );
+    const data = { ...product, createdAt: new Date(product.createdAt) };
+    await db.product.upsert({ where: { id: product.id }, create: data, update: data });
 }
