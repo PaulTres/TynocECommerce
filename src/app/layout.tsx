@@ -1,0 +1,40 @@
+import { Footer } from "@/components/Footer";
+import { Header } from "@/components/Header";
+import { SITE_NAME } from "@/lib/constants";
+import type { Metadata } from "next";
+import { Bricolage_Grotesque } from "next/font/google";
+import "./globals.css";
+
+const sans = Bricolage_Grotesque({
+    subsets: ["latin"],
+    variable: "--font-sans",
+    display: "swap",
+});
+
+export const metadata: Metadata = {
+    title: {
+        default: `${SITE_NAME} - everyday goods, well chosen`,
+        template: `%s | ${SITE_NAME}`,
+    },
+    description:
+        "A full-stack e-commerce demo built with Next.js, Auth.js and DynamoDB.",
+};
+
+/** Root layout: persistent header/footer around every page. */
+export default function RootLayout({
+    children,
+}: {
+    children: React.ReactNode;
+}) {
+    return (
+        <html lang="en" className={sans.variable}>
+            <body className="flex min-h-screen flex-col">
+                <Header />
+                <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+                    {children}
+                </main>
+                <Footer />
+            </body>
+        </html>
+    );
+}
