@@ -1,11 +1,12 @@
 "use server";
 
 import { signIn, signOut } from "@/auth";
-import { AppError, RATE_LIMITED_CODE } from "@/lib/errors";
 import {
     checkIdentifierRateLimit,
     checkSubmitRateLimit,
+    tooManyAttemptsMessage,
 } from "@/lib/api/rate-limit"; // adjust to wherever rate-limit.ts lives
+import { AppError, RATE_LIMITED_CODE } from "@/lib/errors";
 import { safeRedirectPath } from "@/lib/utils";
 import { loginSchema, registerSchema } from "@/lib/validation/schemas";
 import { registerUser } from "@/services/auth.service";
@@ -16,20 +17,6 @@ import { headers } from "next/headers";
 export interface FormState {
     error?: string;
     fieldErrors?: Record<string, string[] | undefined>;
-}
-
-
-/**
- * Turns a retry delay into a short user-facing message.
- * Rounds up to whole minutes once it exceeds a minute so the text stays readable
- * ("Try again in 14 minutes" instead of "in 837 seconds").
- */
-function tooManyAttemptsMessage(retryAfterSeconds: number): string {
-    const wait =
-        retryAfterSeconds < 60
-            ? `${retryAfterSeconds} seconds`
-            : `${Math.ceil(retryAfterSeconds / 60)} minutes`;
-    return `Too many attempts. Please try again in ${wait}.`;
 }
 
 /**

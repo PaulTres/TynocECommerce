@@ -226,6 +226,19 @@ async function consume(
 }
 
 /**
+ * Turns a retry delay into a short user-facing message.
+ * Rounds up to whole minutes once it exceeds a minute so the text stays readable
+ * ("Try again in 14 minutes" instead of "in 837 seconds").
+ */
+export function tooManyAttemptsMessage(retryAfterSeconds: number): string {
+    const wait =
+        retryAfterSeconds < 60
+            ? `${retryAfterSeconds} seconds`
+            : `${Math.ceil(retryAfterSeconds / 60)} minutes`;
+    return `Too many attempts. Please try again in ${wait}.`;
+}
+
+/**
  * IP-based check: global bucket first, then the per-form bucket.
  * Used for login and register (slug = "login" | "register").
  * If Redis is down or unconfigured the request is allowed.
