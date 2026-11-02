@@ -16,8 +16,20 @@ export const POST = withErrors(async (req: Request) => {
         { headers: req.headers },
         "register",
     );
-    if (!ipLimit.allowed)
-        throw { error: tooManyAttemptsMessage(ipLimit.retryAfterSeconds) };
+    if (!ipLimit.allowed) {
+        return NextResponse.json(
+            {
+                error: {
+                    code: "RATE_LIMITED",
+                    message: tooManyAttemptsMessage(ipLimit.retryAfterSeconds),
+                },
+            },
+            {
+                status: 429,
+                headers: ipLimit.headers,
+            },
+        );
+    }
     const input = registerSchema.parse(await readJson(req));
     const user = await registerUser(input);
     return NextResponse.json({ user }, { status: 201 });
