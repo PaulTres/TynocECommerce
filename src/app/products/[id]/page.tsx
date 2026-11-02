@@ -74,7 +74,7 @@ export default async function ProductPage({ params }: Params) {
                         : ["/placeholder.svg"]
                     ).map((src, i) => (
                         <Image
-                            key={`{i}-{src}`}
+                            key={`${i}-${src}`}
                             src={src}
                             alt={i === 0 ? product.name : ""}
                             width={800}
