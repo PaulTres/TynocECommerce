@@ -1,16 +1,22 @@
-import { auth } from "@/auth";
+import { cache } from "react";
+import { getRequestAuth } from "@/lib/auth/request";
+import { getOrCreateAppUser } from "@/lib/db/users.repo";
 import { UnauthorizedError } from "@/lib/errors";
 
-/** Returns the signed-in user's id or null (for pages that adapt to anonymous visitors). */
-export async function getUserId(): Promise<string | null> {
-    const session = await auth();
-    return session?.user?.id ?? null;
-}
+/** Returns the app's opaque user id or null for anonymous visitors. */
+export const getUserId = cache(async (): Promise<string | null> => {
+    const requestAuth = await getRequestAuth();
+    if (!requestAuth) return null;
+
+    const { data: session } = await requestAuth.getSession({
+        query: { disableCookieCache: "true" },
+    });
+    return session?.user ? getOrCreateAppUser() : null;
+});
 
 /**
- * Returns the signed-in user's id or throws.
- * The user id always comes from the verified session, so one user cannot touch
- * another user's cart or wishlist.
+ * Returns the app's opaque user id or throws. Cart and wishlist repositories
+ * also pass the Neon JWT so PostgreSQL RLS independently checks row ownership.
  * @throws UnauthorizedError when there is no session.
  */
 export async function requireUserId(): Promise<string> {

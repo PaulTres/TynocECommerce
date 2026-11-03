@@ -1,77 +1,67 @@
 "use server";
 
-import { signIn, signOut } from "@/auth";
 import {
     checkIdentifierRateLimit,
     checkSubmitRateLimit,
     tooManyAttemptsMessage,
-} from "@/lib/api/rate-limit"; // adjust to wherever rate-limit.ts lives
-import { AppError, RATE_LIMITED_CODE } from "@/lib/errors";
+} from "@/lib/api/rate-limit";
+import { AppError } from "@/lib/errors";
 import { safeRedirectPath } from "@/lib/utils";
 import { loginSchema, registerSchema } from "@/lib/validation/schemas";
-import { registerUser } from "@/services/auth.service";
-import { AuthError } from "next-auth";
+import { registerUser, verifyCredentials } from "@/services/auth.service";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth/server";
 
 /** State shape consumed by useActionState in the auth forms. */
 export interface FormState {
     error?: string;
+    success?: string;
     fieldErrors?: Record<string, string[] | undefined>;
 }
 
 /**
- * True when an Auth.js error came from our RateLimitedError (thrown in `authorize`).
- * Checked via the `code` property rather than `instanceof`, because Auth.js may
- * rebuild the error on its way out of signIn() and the subclass would be lost.
- */
-function isRateLimitedAuthError(err: AuthError): boolean {
-    return (err as AuthError & { code?: string }).code === RATE_LIMITED_CODE;
-}
-
-/**
- * Handles the login form.
- * Validates, then calls Auth.js signIn() which sets the session cookie and throws a
- * redirect on success (that special error must be re-thrown). Bad credentials produce a single
- * generic message so attackers cannot tell whether an email exists.
- *
- * Rate limiting is deliberately not done here: it lives in `authorize` (auth.ts),
- * because the Auth.js endpoint /api/auth/callback/credentials is publicly callable
- * and would bypass this action. Checking in both places would also spend two
- * tokens per attempt. This action only translates the resulting error.
+ * Uses Neon Managed Auth to validate credentials and set its HTTP-only session
+ * cookie. The page action is rate limited, and the public Neon auth proxy is too.
  */
 export async function loginAction(
     _prev: FormState,
     formData: FormData,
 ): Promise<FormState> {
+    const ipLimit = await checkSubmitRateLimit(
+        { headers: await headers() },
+        "login",
+    );
+    if (!ipLimit.allowed)
+        return { error: tooManyAttemptsMessage(ipLimit.retryAfterSeconds) };
+
     const parsed = loginSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success)
         return { fieldErrors: parsed.error.flatten().fieldErrors };
     const redirectTo = safeRedirectPath(
         formData.get("callbackUrl")?.toString(),
     );
+    const idLimit = await checkIdentifierRateLimit("login", parsed.data.email);
+    if (!idLimit.allowed)
+        return { error: tooManyAttemptsMessage(idLimit.retryAfterSeconds) };
+
     try {
-        await signIn("credentials", { ...parsed.data, redirectTo });
+        const user = await verifyCredentials(parsed.data.email, parsed.data.password);
+        if (!user) return { error: "Incorrect email or password" };
     } catch (err) {
-        if (err instanceof AuthError) {
-            // Tell the user to slow down, but keep every other failure generic.
-            if (isRateLimitedAuthError(err))
-                return {
-                    error: "Too many login attempts. Please wait a few minutes and try again.",
-                };
-            return { error: "Incorrect email or password" };
-        }
-        throw err; // includes Next.js' NEXT_REDIRECT - must propagate
+        console.error("[login] Neon Auth request failed", err);
+        return { error: "We could not sign you in. Please try again." };
     }
-    return {};
+    redirect(redirectTo);
 }
 
 /**
  * Handles the registration form:
- * rate limit (IP) -> validate -> rate limit (email) -> create account -> sign in.
+ * rate limit (IP) -> validate -> rate limit (email) -> create account.
  *
- * Unlike login, register is only reachable through this action, so the limit is
- * enforced here. The IP check runs first so floods are rejected before any
- * parsing or database work; malformed submissions count against the limit too.
+ * The IP check runs first so floods are rejected before parsing or database
+ * work; malformed submissions count against the limit too. The Neon Auth API
+ * proxy and JSON registration route apply the same limits.
  * Duplicate emails surface as a field error (see notes about enumeration).
  */
 export async function registerAction(
@@ -110,28 +100,16 @@ export async function registerAction(
         return { error: "We could not create your account. Please try again." };
     }
 
-    // 5. Sign the new user in. This was previously unguarded: if signIn() threw an
-    //    AuthError (e.g. the login limiter tripped), the user got a 500 even though
-    //    the account had just been created. Now they get a clear next step instead.
-    try {
-        await signIn("credentials", {
-            email: parsed.data.email,
-            password: parsed.data.password,
-            redirectTo: safeRedirectPath(
-                formData.get("callbackUrl")?.toString(),
-            ),
-        });
-    } catch (err) {
-        if (err instanceof AuthError)
-            return {
-                error: "Your account was created, but we could not sign you in automatically. Please log in.",
-            };
-        throw err; // NEXT_REDIRECT on success must propagate
-    }
-    return {};
+    const { data: session } = await auth.getSession();
+    if (!session?.user)
+        return {
+            success: "Your account was created. You can sign in now.",
+        };
+    redirect(safeRedirectPath(formData.get("callbackUrl")?.toString()));
 }
 
 /** Signs the user out and returns to the homepage. */
 export async function logoutAction(): Promise<void> {
-    await signOut({ redirectTo: "/" });
+    await auth.signOut();
+    redirect("/");
 }

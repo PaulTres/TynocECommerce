@@ -3,10 +3,18 @@
  * Uses Prisma upserts, so re-running refreshes the catalogue without duplicates.
  * Images use picsum.photos with a per-product seed so each product gets a stable picture.
  */
-import { putCategory } from "../src/lib/db/categories.repo";
-import { putProduct } from "../src/lib/db/products.repo";
-import { slugify } from "../src/lib/utils";
+import { PrismaClient } from "@prisma/client";
 import type { Category, Product } from "../src/types";
+
+function slugify(value: string): string {
+    return value
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+}
 
 const img = (seed: string, size = 800) =>
     `https://picsum.photos/seed/${seed}/${size}/${size}`;
@@ -54,8 +62,20 @@ const rows: [string, string, number, number, boolean][] = [
     ["Packable Rain Jacket", "outdoors", 14500, 7, false],
 ];
 
+const directUrl = process.env.DIRECT_URL;
+if (!directUrl) throw new Error("DIRECT_URL is required for database seeding");
+const db = new PrismaClient({ datasources: { db: { url: directUrl } } });
+
 async function main(): Promise<void> {
-    await Promise.all(categories.map(putCategory));
+    await Promise.all(
+        categories.map((category) =>
+            db.category.upsert({
+                where: { slug: category.slug },
+                create: category,
+                update: category,
+            }),
+        ),
+    );
     const base = Date.now();
     // Stagger createdAt so date ordering is deterministic.
     const products: Product[] = rows.map(
@@ -76,13 +96,24 @@ async function main(): Promise<void> {
             };
         },
     );
-    await Promise.all(products.map(putProduct));
+    await Promise.all(
+        products.map((product) => {
+            const data = { ...product, createdAt: new Date(product.createdAt) };
+            return db.product.upsert({
+                where: { id: product.id },
+                create: data,
+                update: data,
+            });
+        }),
+    );
     console.log(
         `Seeded ${categories.length} categories and ${products.length} products.`,
     );
 }
 
-main().catch((err) => {
-    console.error(err);
-    process.exit(1);
-});
+main()
+    .catch((err) => {
+        console.error(err);
+        process.exitCode = 1;
+    })
+    .finally(() => db.$disconnect());

@@ -5,14 +5,6 @@ const nextConfig = {
     images: {
         remotePatterns: [{ protocol: "https", hostname: "picsum.photos" }],
     },
-    turbopack: {
-        rules: {
-            "*.css": {
-                loaders: ["@tailwindcss/turbopack"],
-                as: "*.css",
-            },
-        },
-    },
     // Defence-in-depth headers applied to every response.
     async headers() {
         return [

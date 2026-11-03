@@ -1,5 +1,6 @@
 import { readJson, withErrors } from "@/lib/api/handler";
 import {
+    checkIdentifierRateLimit,
     checkSubmitRateLimit,
     tooManyAttemptsMessage,
 } from "@/lib/api/rate-limit";
@@ -31,6 +32,26 @@ export const POST = withErrors(async (req: Request) => {
         );
     }
     const input = registerSchema.parse(await readJson(req));
+    const identifierLimit = await checkIdentifierRateLimit(
+        "register",
+        input.email,
+    );
+    if (!identifierLimit.allowed) {
+        return NextResponse.json(
+            {
+                error: {
+                    code: "RATE_LIMITED",
+                    message: tooManyAttemptsMessage(
+                        identifierLimit.retryAfterSeconds,
+                    ),
+                },
+            },
+            {
+                status: 429,
+                headers: identifierLimit.headers,
+            },
+        );
+    }
     const user = await registerUser(input);
     return NextResponse.json({ user }, { status: 201 });
 });

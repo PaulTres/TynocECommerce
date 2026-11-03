@@ -4,17 +4,15 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DIRECT_URL")
 }
 
 model User {
-  id           String         @id @default(uuid())
-  email        String         @unique
-  name         String
-  passwordHash String
-  createdAt    DateTime       @default(now())
-  cartItems    CartItem[]
-  wishlist     WishlistItem[]
+  id          String         @id @default(uuid())
+  authUserId  String?        @unique
+  createdAt   DateTime       @default(now())
+  cartItems   CartItem[]
+  wishlist    WishlistItem[]
 }
 
 model Category {

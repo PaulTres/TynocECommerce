@@ -10,7 +10,7 @@ export interface User {
     createdAt: string; // ISO-8601
 }
 
-/** Internal user shape that includes the hash. Only auth code should touch it. */
+/** Legacy fixture shape retained for the pre-Neon Auth tests; never persisted. */
 export interface UserRecord extends User {
     passwordHash: string;
 }

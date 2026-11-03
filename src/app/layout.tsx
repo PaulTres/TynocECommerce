@@ -2,14 +2,11 @@ import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { SITE_NAME } from "@/lib/constants";
 import type { Metadata } from "next";
-import { Bricolage_Grotesque } from "next/font/google";
+import { Bricolage_Grotesque, Geist } from "next/font/google";
 import "./globals.css";
+import { cn } from "@/lib/utils";
 
-const sans = Bricolage_Grotesque({
-    subsets: ["latin"],
-    variable: "--font-sans",
-    display: "swap",
-});
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
     title: {
@@ -17,7 +14,7 @@ export const metadata: Metadata = {
         template: `%s | ${SITE_NAME}`,
     },
     description:
-        "A full-stack e-commerce demo built with Next.js, Auth.js and DynamoDB.",
+        "A full-stack e-commerce demo built with Next.js, Neon Managed Auth and Neon Postgres.",
 };
 
 /** Root layout: persistent header/footer around every page. */
@@ -27,7 +24,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="en" className={sans.variable}>
+        <html lang="en" className={cn("font-sans", geist.variable)}>
             <body className="flex min-h-screen flex-col">
                 <Header />
                 <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">

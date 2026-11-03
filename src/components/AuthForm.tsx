@@ -32,6 +32,11 @@ export function AuthForm({ mode, action, callbackUrl }: Props) {
             <h1 className="text-2xl font-bold">
                 {isRegister ? "Create your account" : "Sign in"}
             </h1>
+            {state.success && (
+                <p role="status" className="text-sm text-accent">
+                    {state.success}
+                </p>
+            )}
             <input type="hidden" name="callbackUrl" value={callbackUrl} />
             {isRegister && (
                 <label className="block text-sm">

@@ -1,29 +1,40 @@
-import { ConflictError } from "@/lib/errors";
-import type { UserRecord } from "@/types";
-import { Prisma } from "@prisma/client";
-import { db } from "./client";
+import { dataApi } from "./data-api";
 
-function toRecord(user: { id: string; email: string; name: string; passwordHash: string; createdAt: Date }): UserRecord {
-    return { ...user, createdAt: user.createdAt.toISOString() };
+const MISSING_AUTH_CLAIMS_MESSAGE =
+    "An authenticated Neon Auth Data API token is required";
+
+async function readOrCreateAppUser(): Promise<string> {
+    const rows = await dataApi<{ id: string }[]>("rpc/get_or_create_app_user", {
+        access: "authenticated",
+        method: "POST",
+        body: {},
+    });
+    if (rows[0]?.id) return String(rows[0].id);
+
+    throw new Error(
+        "Neon returned no app user mapping. Apply prisma/app-user-mapping.sql with pnpm run db:app-user.",
+    );
 }
 
-/** Creates an account; the unique email constraint is enforced by PostgreSQL. */
-export async function createUser(user: UserRecord): Promise<void> {
+/**
+ * Returns or creates the app's opaque internal user key for the subject in the
+ * authenticated Neon Auth JWT. The database is the identity source, so the
+ * session lookup and Data API token cannot disagree about which user to map.
+ * Neon can transiently omit JWT claims in an authenticated Data API RPC; retry
+ * that exact failure once because this mapping operation is idempotent.
+ */
+export async function getOrCreateAppUser(): Promise<string> {
     try {
-        await db.user.create({ data: { ...user, createdAt: new Date(user.createdAt) } });
-    } catch (err) {
-        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")
-            throw new ConflictError("An account with this email already exists");
-        throw err;
+        return await readOrCreateAppUser();
+    } catch (error) {
+        if (
+            !(error instanceof Error) ||
+            !error.message.includes(MISSING_AUTH_CLAIMS_MESSAGE)
+        ) {
+            throw error;
+        }
     }
-}
 
-export async function getUserById(id: string): Promise<UserRecord | null> {
-    const user = await db.user.findUnique({ where: { id } });
-    return user ? toRecord(user) : null;
-}
-
-export async function getUserByEmail(email: string): Promise<UserRecord | null> {
-    const user = await db.user.findUnique({ where: { email } });
-    return user ? toRecord(user) : null;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    return readOrCreateAppUser();
 }

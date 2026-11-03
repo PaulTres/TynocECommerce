@@ -10,13 +10,14 @@ import Credentials from "next-auth/providers/credentials";
 import { RateLimitedError } from "./lib/errors";
 
 /**
- * Full Auth.js setup (Node runtime): email + password via the credentials provider.
+ * Legacy Auth.js shim, no longer mounted by the app's route handlers.
+ * Public sign-in and registration use Neon Managed Auth through lib/auth/server.
  *
  * `authorize` runs in this order, cheapest and least-informative checks first:
  *   1. IP rate limit  - before parsing or hitting the DB, so floods cost almost nothing
  *   2. zod validation - never trust the client
  *   3. email rate limit - stops distributed guessing against one account
- *   4. credential check (bcrypt/argon2 is the expensive step, so it comes last)
+ *   4. credential check through Neon Managed Auth
  *
  * Returning null makes Auth.js respond with a generic "CredentialsSignin" error,
  * which avoids revealing whether the email exists.

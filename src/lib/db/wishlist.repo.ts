@@ -1,16 +1,45 @@
 import type { WishlistItemRecord } from "@/types";
-import { db } from "./client";
+import { dataApi } from "./data-api";
+
+function asIso(value: Date | string): string {
+    return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
 
 export async function listWishlist(userId: string): Promise<WishlistItemRecord[]> {
-    const rows = await db.wishlistItem.findMany({ where: { userId }, orderBy: { addedAt: "desc" } });
-    return rows.map(({ productId, addedAt }) => ({ productId, addedAt: addedAt.toISOString() }));
+    const query = new URLSearchParams({
+        select: "productId,addedAt",
+        userId: "eq." + JSON.stringify(userId),
+        order: "addedAt.desc",
+    });
+    const rows = await dataApi<{
+        productId: string;
+        addedAt: string;
+    }[]>("WishlistItem", { access: "authenticated", query });
+    return rows.map((row) => ({
+        productId: String(row.productId),
+        addedAt: asIso(row.addedAt as Date | string),
+    }));
 }
 
 export async function addWishlistItem(userId: string, productId: string): Promise<boolean> {
-    const result = await db.wishlistItem.createMany({ data: [{ userId, productId }], skipDuplicates: true });
-    return result.count > 0;
+    const rows = await dataApi<{ productId: string }[]>("WishlistItem", {
+        access: "authenticated",
+        method: "POST",
+        query: new URLSearchParams({ on_conflict: "userId,productId" }),
+        body: { userId, productId },
+        prefer: "resolution=ignore-duplicates,return=representation",
+    });
+    return rows.length > 0;
 }
 
 export async function removeWishlistItem(userId: string, productId: string): Promise<void> {
-    await db.wishlistItem.deleteMany({ where: { userId, productId } });
+    const query = new URLSearchParams({
+        userId: "eq." + JSON.stringify(userId),
+        productId: "eq." + JSON.stringify(productId),
+    });
+    await dataApi<unknown>("WishlistItem", {
+        access: "authenticated",
+        method: "DELETE",
+        query,
+    });
 }
