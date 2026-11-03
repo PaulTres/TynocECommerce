@@ -28,13 +28,14 @@ export function ProductCard({ product, wishlisted, signedIn }: Props) {
                     className="h-full w-full object-cover"
                 />
             </Link>
-            <div className="absolute right-2 top-2">
-                <WishlistButton
-                    productId={product.id}
-                    initialWishlisted={wishlisted}
-                    signedIn={signedIn}
-                />
-            </div>
+            {signedIn && (
+                <div className="absolute right-2 top-2">
+                    <WishlistButton
+                        productId={product.id}
+                        initialWishlisted={wishlisted}
+                    />
+                </div>
+            )}
             <div className="flex flex-1 flex-col gap-1 p-3">
                 <Link
                     href={`/products/${product.id}`}
