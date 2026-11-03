@@ -48,6 +48,11 @@ export default async function ProductPage({ params }: Params) {
         ? await getWishlistIds(userId)
         : new Set<string>();
 
+    if (!userId)
+        console.warn(
+            "Dedicated product page was accessed despite no user being signed in!",
+        );
+
     return (
         <div className="space-y-12">
             <nav aria-label="Breadcrumb" className="text-sm text-slate">
@@ -90,7 +95,6 @@ export default async function ProductPage({ params }: Params) {
                         <WishlistButton
                             productId={product.id}
                             initialWishlisted={wishlistIds.has(product.id)}
-                            signedIn={Boolean(userId)}
                         />
                     </div>
                     <p className="text-2xl font-semibold">
