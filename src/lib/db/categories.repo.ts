@@ -38,8 +38,3 @@ export async function getCategory(slug: string): Promise<Category | null> {
           }
         : null;
 }
-
-/** @deprecated Catalogue writes run through the owner-only seed script. */
-export async function putCategory(_category: Category): Promise<void> {
-    throw new Error("Catalogue writes require the owner-only seed script");
-}

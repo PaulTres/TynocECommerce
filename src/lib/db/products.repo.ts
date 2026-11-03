@@ -26,7 +26,9 @@ type ProductCursorRow = {
 function decodeCursor(cursor?: string): string | undefined {
     if (!cursor) return undefined;
     try {
-        const id: unknown = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
+        const id: unknown = JSON.parse(
+            Buffer.from(cursor, "base64url").toString("utf8"),
+        );
         if (typeof id === "string" && id.length > 0) return id;
     } catch {
         // Return the validation error below.
@@ -35,11 +37,15 @@ function decodeCursor(cursor?: string): string | undefined {
 }
 
 function encodeCursor(id?: string): string | null {
-    return id ? Buffer.from(JSON.stringify(id), "utf8").toString("base64url") : null;
+    return id
+        ? Buffer.from(JSON.stringify(id), "utf8").toString("base64url")
+        : null;
 }
 
 function toIso(value: unknown): string {
-    return value instanceof Date ? value.toISOString() : new Date(String(value)).toISOString();
+    return value instanceof Date
+        ? value.toISOString()
+        : new Date(String(value)).toISOString();
 }
 
 function toStringArray(value: unknown): string[] {
@@ -127,9 +133,13 @@ export async function queryProducts(q: ProductQuery): Promise<Page<Product>> {
         const pattern = quoteFilterValue("%" + escapeLike(search) + "%");
         const tag = quoteFilterValue(search.toLowerCase());
         logicGroups.push(
-            "or(name.ilike." + pattern +
-                ",description.ilike." + pattern +
-                ",tags.cs.{" + tag + "})",
+            "or(name.ilike." +
+                pattern +
+                ",description.ilike." +
+                pattern +
+                ",tags.cs.{" +
+                tag +
+                "})",
         );
     }
 
@@ -152,28 +162,39 @@ export async function queryProducts(q: ProductQuery): Promise<Page<Product>> {
         const cursorId = quoteFilterValue(cursorRow.id);
         if (sort === "price-asc") {
             logicGroups.push(
-                "or(priceCents.gt." + cursorRow.priceCents +
-                    ",and(priceCents.eq." + cursorRow.priceCents +
-                    ",id.gt." + cursorId + "))",
+                "or(priceCents.gt." +
+                    cursorRow.priceCents +
+                    ",and(priceCents.eq." +
+                    cursorRow.priceCents +
+                    ",id.gt." +
+                    cursorId +
+                    "))",
             );
         } else if (sort === "price-desc") {
             logicGroups.push(
-                "or(priceCents.lt." + cursorRow.priceCents +
-                    ",and(priceCents.eq." + cursorRow.priceCents +
-                    ",id.gt." + cursorId + "))",
+                "or(priceCents.lt." +
+                    cursorRow.priceCents +
+                    ",and(priceCents.eq." +
+                    cursorRow.priceCents +
+                    ",id.gt." +
+                    cursorId +
+                    "))",
             );
         } else {
             const createdAt = quoteFilterValue(cursorRow.createdAt);
             logicGroups.push(
-                "or(createdAt.lt." + createdAt +
-                    ",and(createdAt.eq." + createdAt +
-                    ",id.lt." + cursorId + "))",
+                "or(createdAt.lt." +
+                    createdAt +
+                    ",and(createdAt.eq." +
+                    createdAt +
+                    ",id.lt." +
+                    cursorId +
+                    "))",
             );
         }
     }
 
-    if (logicGroups.length === 1)
-        query.set("or", logicGroups[0].slice(2));
+    if (logicGroups.length === 1) query.set("or", logicGroups[0].slice(2));
     else if (logicGroups.length > 1)
         query.set("and", "(" + logicGroups.join(",") + ")");
 
@@ -197,7 +218,10 @@ export async function queryProducts(q: ProductQuery): Promise<Page<Product>> {
     };
 }
 
-export async function getRelated(product: Product, limit = 4): Promise<Product[]> {
+export async function getRelated(
+    product: Product,
+    limit = 4,
+): Promise<Product[]> {
     const query = new URLSearchParams({
         select: PRODUCT_COLUMNS,
         categorySlug: "eq." + quoteFilterValue(product.categorySlug),
@@ -210,9 +234,4 @@ export async function getRelated(product: Product, limit = 4): Promise<Product[]
         query,
     });
     return rows.map(toProduct);
-}
-
-/** @deprecated Catalogue writes run through the owner-only seed script. */
-export async function putProduct(_product: Product): Promise<void> {
-    throw new Error("Catalogue writes require the owner-only seed script");
 }
