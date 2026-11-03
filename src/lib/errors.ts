@@ -1,5 +1,3 @@
-import { CredentialsSignin } from "next-auth";
-
 /**
  * Typed application errors. Services throw these; the API/action layer maps them
  * to HTTP status codes or ActionResult values. This keeps business logic free of
@@ -43,6 +41,12 @@ export const RATE_LIMITED_CODE = "rate_limited";
 /**
  * Thrown when a login attempt is rate limited.
  */
-export class RateLimitedError extends CredentialsSignin {
-    code = RATE_LIMITED_CODE;
+export class RateLimitedError extends Error {
+    readonly code = RATE_LIMITED_CODE;
+    readonly status = 429;
+
+    constructor(message = "Too many attempts. Try again in a few minutes.") {
+        super(message);
+        this.name = "RateLimitedError";
+    }
 }

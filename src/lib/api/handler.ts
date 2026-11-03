@@ -35,7 +35,7 @@ export function errorResponse(err: unknown): NextResponse {
                     message: "Too many attempts. Try again in a few minutes.",
                 },
             },
-            { status: 400 },
+            { status: 429 },
         );
     }
     console.error("[api] unexpected error", err);
