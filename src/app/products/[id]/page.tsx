@@ -12,6 +12,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -20,17 +21,28 @@ type Params = { params: Promise<{ id: string }> };
  * Invalid ids (fail the zod pattern) and unknown ids both end in notFound(); any other
  * error is rethrown so error.tsx handles it.
  */
-async function load(id: string) {
+// async function load(id: string) {
+//     const parsed = productIdSchema.safeParse(id);
+//     if (!parsed.success) notFound();
+//     try {
+//         return await getProductDetail(parsed.data);
+//     } catch (err) {
+//         //console.log(`${id} not found`);
+//         if (err instanceof NotFoundError) notFound();
+//         throw err;
+//     }
+// }
+
+const load = cache(async (id: string) => {
     const parsed = productIdSchema.safeParse(id);
     if (!parsed.success) notFound();
     try {
         return await getProductDetail(parsed.data);
     } catch (err) {
-        //console.log(`${id} not found`);
         if (err instanceof NotFoundError) notFound();
         throw err;
     }
-}
+});
 
 /** Per-product title and description. */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
