@@ -7,4 +7,4 @@ out
 next-env.d.ts
 coverage
 .vercel
-requirements.txt
+task-requirements.txt
