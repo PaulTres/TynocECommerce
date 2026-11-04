@@ -3,42 +3,46 @@
 name: Node.js CI
 
 on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
-  workflow_dispatch:
+    push:
+        branches: ["main"]
+    pull_request:
+        branches: ["main"]
+    workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+    build:
+        runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [22.x, 23.x, 24.x]
+        strategy:
+            matrix:
+                node-version: [22.x, 23.x, 24.x]
 
-    steps:
-      - uses: actions/checkout@v4
+        steps:
+            - uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 12
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v6
+              with:
+                  version: 12
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: pnpm
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        
-      - name: Build
-        run: pnpm build
-      - name: Tests
-        run: pnpm run test
-      - name: Lint
-        run: pnpm run lint
-      - name: TypeScript
-        run: pnpm run typecheck
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Build
+              run: pnpm build
+              # Reserved values for build when .env.local is not present, so we don't expose production secrets.
+              env:
+                  NEON_AUTH_BASE_URL: https://build.invalid/neondb/auth
+                  NEON_AUTH_COOKIE_SECRET: build-only-placeholder-secret-not-used-at-runtime
+            - name: Tests
+              run: pnpm run test
+            - name: Lint
+              run: pnpm run lint
+            - name: TypeScript
+              run: pnpm run typecheck
