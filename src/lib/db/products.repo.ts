@@ -58,7 +58,7 @@ function toProduct(row: ProductRow): Product {
         name: String(row.name),
         description: String(row.description),
         priceCents: Number(row.priceCents),
-        currency: "USD",
+        currency: String(row.currency),
         categorySlug: String(row.categorySlug),
         images: toStringArray(row.images),
         stock: Number(row.stock),

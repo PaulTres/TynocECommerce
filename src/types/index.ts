@@ -28,7 +28,7 @@ export interface Product {
     name: string;
     description: string;
     priceCents: number;
-    currency: "USD";
+    currency: string;
     categorySlug: string;
     images: string[];
     stock: number;
