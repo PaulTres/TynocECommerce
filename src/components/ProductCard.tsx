@@ -13,6 +13,7 @@ interface Props {
 
 /** Product tile used in every grid. The whole image/title is one link; the heart is a separate control. */
 export function ProductCard({ product, wishlisted, signedIn }: Props) {
+    //console.log(product.id, product.name);
     return (
         <article className="group relative flex flex-col overflow-hidden rounded-lg border border-line bg-surface">
             <Link

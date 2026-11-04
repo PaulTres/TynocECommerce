@@ -14,7 +14,10 @@ import type { Cart, CartLine } from "@/types";
 export async function getCart(userId: string): Promise<Cart> {
     const rows = await cartRepo.listCartItems(userId);
     const products = await productsRepo.batchGetProducts(
-        rows.map((r) => r.productId),
+        rows.map((r) => {
+            console.log(r);
+            return r.productId;
+        }),
     );
     const byId = new Map(products.map((p) => [p.id, p]));
 
@@ -56,12 +59,13 @@ export async function addToCart(
     if (!product) throw new NotFoundError("Product not found");
     if (product.stock <= 0)
         throw new ConflictError("This product is out of stock");
-    return cartRepo.incrementItem(
+    const result = cartRepo.incrementItem(
         userId,
         productId,
         quantity,
         Math.min(MAX_QTY_PER_ITEM, product.stock),
     );
+    return result;
 }
 
 /** Sets an exact quantity; 0 removes the line. Quantity is capped by stock like in addToCart. */

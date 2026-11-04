@@ -3,21 +3,25 @@ import type { CartItemRecord } from "@/types";
 import { dataApi } from "./data-api";
 
 function asIso(value: Date | string): string {
-    return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+    return value instanceof Date
+        ? value.toISOString()
+        : new Date(value).toISOString();
 }
 
 export async function listCartItems(userId: string): Promise<CartItemRecord[]> {
     const query = new URLSearchParams({
         select: "productId,quantity,addedAt,updatedAt",
-        userId: "eq." + JSON.stringify(userId),
+        userId: `eq.${userId}`,
         order: "addedAt.asc",
     });
-    const rows = await dataApi<{
-        productId: string;
-        quantity: number;
-        addedAt: string;
-        updatedAt: string;
-    }[]>("CartItem", { access: "authenticated", query });
+    const rows = await dataApi<
+        {
+            productId: string;
+            quantity: number;
+            addedAt: string;
+            updatedAt: string;
+        }[]
+    >("CartItem", { access: "authenticated", query });
     return rows.map((row) => ({
         productId: String(row.productId),
         quantity: Number(row.quantity),
@@ -33,7 +37,8 @@ export async function incrementItem(
     qty: number,
     cap: number,
 ): Promise<number> {
-    if (qty > cap) throw new ConflictError(`You can add at most ${cap} of this item`);
+    if (qty > cap)
+        throw new ConflictError(`You can add at most ${cap} of this item`);
 
     const quantity = await dataApi<number | null>("rpc/increment_cart_item", {
         access: "authenticated",
@@ -46,7 +51,9 @@ export async function incrementItem(
         },
     });
     if (quantity === null)
-        throw new ConflictError(`You can have at most ${cap} of this item in your cart`);
+        throw new ConflictError(
+            `You can have at most ${cap} of this item in your cart`,
+        );
     return Number(quantity);
 }
 
@@ -56,8 +63,8 @@ export async function setQuantity(
     quantity: number,
 ): Promise<void> {
     const query = new URLSearchParams({
-        userId: "eq." + JSON.stringify(userId),
-        productId: "eq." + JSON.stringify(productId),
+        userId: `eq.${userId}`,
+        productId: `eq.${productId}`,
         select: "productId",
     });
     const rows = await dataApi<{ productId: string }[]>("CartItem", {
@@ -67,13 +74,17 @@ export async function setQuantity(
         body: { quantity, updatedAt: new Date().toISOString() },
         prefer: "return=representation",
     });
-    if (rows.length === 0) throw new NotFoundError("That item is not in your cart");
+    if (rows.length === 0)
+        throw new NotFoundError("That item is not in your cart");
 }
 
-export async function removeItem(userId: string, productId: string): Promise<void> {
+export async function removeItem(
+    userId: string,
+    productId: string,
+): Promise<void> {
     const query = new URLSearchParams({
-        userId: "eq." + JSON.stringify(userId),
-        productId: "eq." + JSON.stringify(productId),
+        userId: `eq.${userId}`,
+        productId: `eq.${JSON.stringify(productId)}`,
     });
     await dataApi<unknown>("CartItem", {
         access: "authenticated",

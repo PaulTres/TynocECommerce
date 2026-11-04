@@ -8,7 +8,7 @@ function asIso(value: Date | string): string {
 export async function listWishlist(userId: string): Promise<WishlistItemRecord[]> {
     const query = new URLSearchParams({
         select: "productId,addedAt",
-        userId: "eq." + JSON.stringify(userId),
+        userId: `eq.${userId}`,
         order: "addedAt.desc",
     });
     const rows = await dataApi<{
@@ -34,8 +34,8 @@ export async function addWishlistItem(userId: string, productId: string): Promis
 
 export async function removeWishlistItem(userId: string, productId: string): Promise<void> {
     const query = new URLSearchParams({
-        userId: "eq." + JSON.stringify(userId),
-        productId: "eq." + JSON.stringify(productId),
+        userId: `eq.${userId}`,
+        productId: `eq.${productId}`,
     });
     await dataApi<unknown>("WishlistItem", {
         access: "authenticated",

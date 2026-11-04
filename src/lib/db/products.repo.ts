@@ -85,7 +85,7 @@ function escapeLike(value: string): string {
 export async function getProduct(id: string): Promise<Product | null> {
     const query = new URLSearchParams({
         select: PRODUCT_COLUMNS,
-        id: "eq." + quoteFilterValue(id),
+        id: `eq.${id}`,
         limit: "1",
     });
     const rows = await dataApi<ProductRow[]>("Product", {
@@ -101,7 +101,7 @@ export async function batchGetProducts(ids: string[]): Promise<Product[]> {
 
     const query = new URLSearchParams({
         select: PRODUCT_COLUMNS,
-        id: "in.(" + uniqueIds.map(quoteFilterValue).join(",") + ")",
+        id: "in.(" + uniqueIds.join(",") + ")",
     });
     const rows = await dataApi<ProductRow[]>("Product", {
         access: "anonymous",
@@ -120,8 +120,7 @@ export async function queryProducts(q: ProductQuery): Promise<Page<Product>> {
     });
     const logicGroups: string[] = [];
 
-    if (q.categorySlug)
-        query.set("categorySlug", "eq." + quoteFilterValue(q.categorySlug));
+    if (q.categorySlug) query.set("categorySlug", `eq.${q.categorySlug}`);
     if (q.minPriceCents !== undefined)
         query.set("priceCents", "gte." + String(q.minPriceCents));
     if (q.maxPriceCents !== undefined) {
@@ -147,7 +146,7 @@ export async function queryProducts(q: ProductQuery): Promise<Page<Product>> {
     if (afterId) {
         const cursorQuery = new URLSearchParams({
             select: "id,priceCents,createdAt",
-            id: "eq." + quoteFilterValue(afterId),
+            id: `eq.${afterId}`,
             limit: "1",
         });
         const cursorRows = await dataApi<ProductCursorRow[]>("Product", {
@@ -224,8 +223,8 @@ export async function getRelated(
 ): Promise<Product[]> {
     const query = new URLSearchParams({
         select: PRODUCT_COLUMNS,
-        categorySlug: "eq." + quoteFilterValue(product.categorySlug),
-        id: "neq." + quoteFilterValue(product.id),
+        categorySlug: `eq.${product.categorySlug}`,
+        id: `neq.${product.id}`,
         order: "createdAt.desc,id.desc",
         limit: String(Math.max(0, Math.trunc(limit))),
     });

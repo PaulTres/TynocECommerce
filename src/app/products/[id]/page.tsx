@@ -26,6 +26,7 @@ async function load(id: string) {
     try {
         return await getProductDetail(parsed.data);
     } catch (err) {
+        //console.log(`${id} not found`);
         if (err instanceof NotFoundError) notFound();
         throw err;
     }

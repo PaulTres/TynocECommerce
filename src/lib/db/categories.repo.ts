@@ -21,7 +21,7 @@ export async function listCategories(): Promise<Category[]> {
 export async function getCategory(slug: string): Promise<Category | null> {
     const query = new URLSearchParams({
         select: "slug,name,description,imageUrl",
-        slug: "eq." + JSON.stringify(slug),
+        slug: `eq.${slug}`,
         limit: "1",
     });
     const rows = await dataApi<Category[]>("Category", {

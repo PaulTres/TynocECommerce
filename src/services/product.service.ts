@@ -32,7 +32,10 @@ export async function getCategories(): Promise<Category[]> {
  */
 export async function getProductDetail(id: string) {
     const product = await productsRepo.getProduct(id);
-    if (!product) throw new NotFoundError("Product not found");
+    if (!product) {
+        //console.log(`Product with id ${id} not found`);
+        throw new NotFoundError(`Product with id ${id} not found`);
+    }
     const [category, related] = await Promise.all([
         categoriesRepo.getCategory(product.categorySlug),
         productsRepo.getRelated(product, 4),
