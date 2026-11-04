@@ -33,6 +33,7 @@ export const getUserDisplayName = cache(async (): Promise<string | null> => {
 
 /** Returns the app's opaque user id or null for anonymous visitors. */
 export const getUserId = cache(async (): Promise<string | null> => {
+    //throw new Error("Testing testing");
     return (await getAuthIdentity()) ? getOrCreateAppUser() : null;
 });
 
