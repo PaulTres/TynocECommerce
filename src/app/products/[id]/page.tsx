@@ -45,14 +45,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function ProductPage({ params }: Params) {
     const { product, category, related } = await load((await params).id);
     const userId = await getUserId();
-    const wishlistIds = userId
-        ? await getWishlistIds(userId)
-        : new Set<string>();
-
     if (!userId)
         console.warn(
             "Dedicated product page was accessed despite no user being signed in!",
         );
+    const wishlistIds = userId
+        ? await getWishlistIds(userId)
+        : new Set<string>();
 
     return (
         <div className="space-y-12">
@@ -91,13 +90,17 @@ export default async function ProductPage({ params }: Params) {
                     ))}
                 </div>
                 <div className="space-y-5">
-                    <div className="flex items-start justify-between gap-3">
-                        <h1 className="text-3xl font-bold">{product.name}</h1>
-                        <WishlistButton
-                            productId={product.id}
-                            initialWishlisted={wishlistIds.has(product.id)}
-                        />
-                    </div>
+                    {userId && (
+                        <div className="flex items-start justify-between gap-3">
+                            <h1 className="text-3xl font-bold">
+                                {product.name}
+                            </h1>
+                            <WishlistButton
+                                productId={product.id}
+                                initialWishlisted={wishlistIds.has(product.id)}
+                            />
+                        </div>
+                    )}
                     <p className="text-2xl font-semibold">
                         {formatPrice(product.priceCents)}
                     </p>

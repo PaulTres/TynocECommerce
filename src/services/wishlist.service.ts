@@ -22,6 +22,7 @@ export async function getWishlistIds(userId: string): Promise<Set<string>> {
     );
 }
 
+/** Returns the number of items on a given user's wishlist. */
 export async function getWishlistCount(userId: string): Promise<number> {
     return await wishlistRepo.wishlistCount(userId);
 }
