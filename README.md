@@ -69,4 +69,29 @@ Useful scripts: pnpm run typecheck, pnpm run test, pnpm run lint, and pnpm run b
 
 ## API reference
 
-GET /api/products, GET /api/products/:id, GET /api/categories (public); GET|POST /api/cart, PATCH|DELETE /api/cart/:productId, GET|POST /api/wishlist, DELETE /api/wishlist/:productId (auth required); POST /api/auth/register.
+GET /api/products, 
+
+GET /api/products/:id, 
+
+GET /api/categories (public); 
+
+GET|POST /api/cart, 
+
+PATCH|DELETE /api/cart/:productId, 
+
+GET|POST /api/wishlist, 
+
+DELETE /api/wishlist/:productId (auth required); 
+
+
+POST /api/auth/register.
+
+## App screenshots
+
+<img width="1920" height="873" alt="landing1" src="https://github.com/user-attachments/assets/4c02de03-2f0d-4f5c-815e-61d02d9a76da" />
+<img width="1920" height="841" alt="landing2" src="https://github.com/user-attachments/assets/2ec72953-98b9-4d3c-8a0a-d95a36472500" />
+<img width="1920" height="873" alt="landing3" src="https://github.com/user-attachments/assets/401ffbe9-764e-45fd-a0a7-2eebd58da1cd" />
+<img width="1920" height="871" alt="filter" src="https://github.com/user-attachments/assets/9c1913d8-a353-4ad4-96c3-009232be0efe" />
+<img width="1920" height="875" alt="cart" src="https://github.com/user-attachments/assets/b68dbc72-d7a4-49a4-9a86-c14170d1d7c3" />
+<img width="1920" height="781" alt="wishlist" src="https://github.com/user-attachments/assets/33cd8477-34d2-4066-8a11-406fdd5307fe" />
+<img width="1920" height="890" alt="related" src="https://github.com/user-attachments/assets/350e2360-1967-4f94-9b60-bc3fed2902be" />
