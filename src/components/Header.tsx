@@ -2,6 +2,7 @@ import { logoutAction } from "@/actions/auth";
 import { getUserDisplayName, getUserId } from "@/lib/api/session";
 import { SITE_NAME } from "@/lib/constants";
 import { getCartCount } from "@/services/cart.service";
+import { getWishlistCount } from "@/services/wishlist.service";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -14,6 +15,23 @@ async function CartLink({ userId }: { userId: string | null }) {
             className="relative px-2 py-1 text-sm font-medium hover:text-accent"
         >
             Cart
+            {count > 0 && (
+                <span className="ml-1 rounded-full bg-accent px-1.5 py-0.5 text-xs text-white">
+                    {count}
+                </span>
+            )}
+        </Link>
+    );
+}
+
+async function WishlishLink({ userId }: { userId: string | null }) {
+    const count = userId ? await getWishlistCount(userId).catch(() => 0) : 0; // badge failure must not break the page
+    return (
+        <Link
+            href="/wishlist"
+            className="relative px-2 py-1 text-sm font-medium hover:text-accent"
+        >
+            Wishlist
             {count > 0 && (
                 <span className="ml-1 rounded-full bg-accent px-1.5 py-0.5 text-xs text-white">
                     {count}
@@ -61,12 +79,11 @@ export async function Header() {
                     >
                         Shop
                     </Link>
-                    <Link
-                        href="/wishlist"
-                        className="px-2 py-1 text-sm font-medium hover:text-accent"
+                    <Suspense
+                        fallback={<span className="px-2 text-sm">Cart</span>}
                     >
-                        Wishlist
-                    </Link>
+                        <WishlishLink userId={userId} />
+                    </Suspense>
                     <Suspense
                         fallback={<span className="px-2 text-sm">Cart</span>}
                     >

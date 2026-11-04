@@ -30,6 +30,19 @@ export async function listCartItems(userId: string): Promise<CartItemRecord[]> {
     }));
 }
 
+/** Fetches only quantities so the header badge avoids loading product details. */
+export async function sumCartQuantities(userId: string): Promise<number> {
+    const query = new URLSearchParams({
+        select: "quantity",
+        userId: `eq.${userId}`,
+    });
+    const rows = await dataApi<{ quantity: number }[]>("CartItem", {
+        access: "authenticated",
+        query,
+    });
+    return rows.reduce((total, row) => total + Number(row.quantity), 0);
+}
+
 /** Adds atomically and enforces the line cap even under concurrent requests. */
 export async function incrementItem(
     userId: string,

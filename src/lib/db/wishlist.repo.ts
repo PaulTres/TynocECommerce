@@ -2,26 +2,49 @@ import type { WishlistItemRecord } from "@/types";
 import { dataApi } from "./data-api";
 
 function asIso(value: Date | string): string {
-    return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+    return value instanceof Date
+        ? value.toISOString()
+        : new Date(value).toISOString();
 }
 
-export async function listWishlist(userId: string): Promise<WishlistItemRecord[]> {
+export async function wishlistCount(userId: string): Promise<number> {
+    const query = new URLSearchParams({
+        select: "count()",
+        userId: `eq.${userId}`,
+    });
+
+    const rows = await dataApi<{ count: number }[]>("WishlistItem", {
+        access: "authenticated",
+        query,
+    });
+
+    return Number(rows[0]?.count ?? 0);
+}
+
+export async function listWishlist(
+    userId: string,
+): Promise<WishlistItemRecord[]> {
     const query = new URLSearchParams({
         select: "productId,addedAt",
         userId: `eq.${userId}`,
         order: "addedAt.desc",
     });
-    const rows = await dataApi<{
-        productId: string;
-        addedAt: string;
-    }[]>("WishlistItem", { access: "authenticated", query });
+    const rows = await dataApi<
+        {
+            productId: string;
+            addedAt: string;
+        }[]
+    >("WishlistItem", { access: "authenticated", query });
     return rows.map((row) => ({
         productId: String(row.productId),
         addedAt: asIso(row.addedAt as Date | string),
     }));
 }
 
-export async function addWishlistItem(userId: string, productId: string): Promise<boolean> {
+export async function addWishlistItem(
+    userId: string,
+    productId: string,
+): Promise<boolean> {
     const rows = await dataApi<{ productId: string }[]>("WishlistItem", {
         access: "authenticated",
         method: "POST",
@@ -32,7 +55,10 @@ export async function addWishlistItem(userId: string, productId: string): Promis
     return rows.length > 0;
 }
 
-export async function removeWishlistItem(userId: string, productId: string): Promise<void> {
+export async function removeWishlistItem(
+    userId: string,
+    productId: string,
+): Promise<void> {
     const query = new URLSearchParams({
         userId: `eq.${userId}`,
         productId: `eq.${productId}`,

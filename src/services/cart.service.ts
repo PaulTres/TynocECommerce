@@ -39,7 +39,7 @@ export async function getCart(userId: string): Promise<Cart> {
 
 /** Number of items in the cart, for the header badge. */
 export async function getCartCount(userId: string): Promise<number> {
-    return (await getCart(userId)).itemCount;
+    return cartRepo.sumCartQuantities(userId);
 }
 
 /**

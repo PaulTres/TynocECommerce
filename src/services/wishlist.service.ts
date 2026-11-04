@@ -22,6 +22,10 @@ export async function getWishlistIds(userId: string): Promise<Set<string>> {
     );
 }
 
+export async function getWishlistCount(userId: string): Promise<number> {
+    return await wishlistRepo.wishlistCount(userId);
+}
+
 /**
  * Adds a product (idempotent - duplicates are prevented by conditional write).
  * @returns whether it was newly added.
