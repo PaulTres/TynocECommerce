@@ -84,7 +84,7 @@ export async function removeItem(
 ): Promise<void> {
     const query = new URLSearchParams({
         userId: `eq.${userId}`,
-        productId: `eq.${JSON.stringify(productId)}`,
+        productId: `eq.${productId}`,
     });
     await dataApi<unknown>("CartItem", {
         access: "authenticated",
