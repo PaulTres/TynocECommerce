@@ -3,9 +3,8 @@
 import { useEffect } from "react";
 
 /**
- * Error boundary for unexpected failures (e.g. DynamoDB outage) in any route segment.
+ * Error boundary for unexpected failures in any route segment.
  * Shows a friendly message with a retry; the real error is only logged, never rendered.
- * Might need changing to not even log it for security.
  */
 export default function ErrorPage({
     error,

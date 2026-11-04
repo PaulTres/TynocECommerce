@@ -65,8 +65,6 @@ pnpm run dev
 
 After schema or function changes, refresh the Data API schema cache in the Neon Console under Postgres database > Data API. `db:app-user` installs the runtime mapping function; run it after `db:rls` when setting up a branch, and rerun it when updating the app-user mapping function. Keep `NEON_AUTH_BASE_URL` and `NEON_DATA_API_URL` pointed at the same Neon branch and database.
 
-The schema migration removes the old Auth.js identity fields and password hashes. Existing Auth.js accounts are not automatically transferred to Neon Auth; export or otherwise plan for those accounts before applying db:push. Existing cart and wishlist rows are not automatically linked to Neon Auth accounts, so migrate their ownership mappings if those users need access to prior data.
-
 Useful scripts: pnpm run typecheck, pnpm run test, pnpm run lint, and pnpm run build.
 
 ## API reference

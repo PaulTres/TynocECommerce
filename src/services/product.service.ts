@@ -10,7 +10,7 @@ export async function searchProducts(
     return productsRepo.queryProducts(query);
 }
 
-/** Featured products for the homepage. Swap to GSI when product count grows. */
+/** Featured products for the homepage. */
 export async function getFeaturedProducts(limit = 4): Promise<Product[]> {
     const page = await productsRepo.queryProducts({ limit: 24 });
     return page.items.filter((p) => p.featured).slice(0, limit);

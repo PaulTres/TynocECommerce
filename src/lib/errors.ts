@@ -36,7 +36,7 @@ export class ConflictError extends AppError {
     }
 }
 
-/**There is a possibility Auth.JS rebuilds the error, so instanceof checks may not be reliable. */
+
 export const RATE_LIMITED_CODE = "rate_limited";
 /**
  * Thrown when a login attempt is rate limited.

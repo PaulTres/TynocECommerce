@@ -47,8 +47,7 @@ export type RateLimitResult =
       };
 
 /**
- * Anything that carries headers. A `Request` (route handlers, Auth.js `authorize`)
- * satisfies this, and so does `{ headers: await headers() }` in a server action.
+ * Anything that carries headers. A `Request` satisfies this, and so does `{ headers: await headers() }` in a server action.
  */
 export type HeadersCarrier = { headers: Headers };
 

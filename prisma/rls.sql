@@ -20,7 +20,7 @@ END
 $$;
 
 -- The old table held credentials owned by the application. Keep the internal
--- ids (and cart/wishlist foreign keys), but remove all Auth.js identity data.
+-- ids (and cart/wishlist foreign keys), but remove all identity data.
 ALTER TABLE public."User"
     ADD COLUMN IF NOT EXISTS "authUserId" TEXT;
 ALTER TABLE public."User"
