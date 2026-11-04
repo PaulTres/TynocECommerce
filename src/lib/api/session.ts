@@ -1,7 +1,7 @@
-import { cache } from "react";
 import { getRequestAuth } from "@/lib/auth/request";
 import { getOrCreateAppUser } from "@/lib/db/users.repo";
 import { UnauthorizedError } from "@/lib/errors";
+import { cache } from "react";
 
 type AuthIdentity = {
     name: string | null;

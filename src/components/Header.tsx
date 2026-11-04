@@ -4,7 +4,9 @@ import { SITE_NAME } from "@/lib/constants";
 import { getCartCount } from "@/services/cart.service";
 import { getWishlistCount } from "@/services/wishlist.service";
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { Suspense } from "react";
+import { RetryButton } from "./RetryButton";
 
 /** Cart link with a live item count. Isolated in <Suspense> so a slow DB read never blocks the header. */
 async function CartLink({ userId }: { userId: string | null }) {
@@ -43,75 +45,98 @@ async function WishlishLink({ userId }: { userId: string | null }) {
 
 /** Site header: brand, search (plain GET form - works without JS), nav, auth controls. */
 export async function Header() {
-    const [userId, userDisplayName] = await Promise.all([
-        getUserId(),
-        getUserDisplayName(),
-    ]);
-    return (
-        <header className="border-b border-line bg-surface">
-            <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 sm:px-6">
-                <Link href="/" className="text-xl font-bold tracking-tight">
-                    {SITE_NAME}
-                </Link>
-                <form
-                    action="/products"
-                    className="order-last w-full sm:order-none sm:w-auto sm:flex-1"
-                    role="search"
-                >
-                    <label htmlFor="site-search" className="sr-only">
-                        Search products
-                    </label>
-                    <input
-                        id="site-search"
-                        name="q"
-                        type="search"
-                        placeholder="Search products"
-                        className="field max-w-md"
-                    />
-                </form>
-                <nav
-                    className="ml-auto flex items-center gap-2"
-                    aria-label="Main"
-                >
-                    <Link
-                        href="/products"
-                        className="px-2 py-1 text-sm font-medium hover:text-accent"
-                    >
-                        Shop
+    try {
+        const [userId, userDisplayName] = await Promise.all([
+            getUserId(),
+            getUserDisplayName(),
+        ]);
+        return (
+            <header className="border-b border-line bg-surface">
+                <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 sm:px-6">
+                    <Link href="/" className="text-xl font-bold tracking-tight">
+                        {SITE_NAME}
                     </Link>
-                    <Suspense
-                        fallback={<span className="px-2 text-sm">Cart</span>}
+                    <form
+                        action="/products"
+                        className="order-last w-full sm:order-none sm:w-auto sm:flex-1"
+                        role="search"
                     >
-                        <WishlishLink userId={userId} />
-                    </Suspense>
-                    <Suspense
-                        fallback={<span className="px-2 text-sm">Cart</span>}
+                        <label htmlFor="site-search" className="sr-only">
+                            Search products
+                        </label>
+                        <input
+                            id="site-search"
+                            name="q"
+                            type="search"
+                            placeholder="Search products"
+                            className="field max-w-md"
+                        />
+                    </form>
+                    <nav
+                        className="ml-auto flex items-center gap-2"
+                        aria-label="Main"
                     >
-                        <CartLink userId={userId} />
-                    </Suspense>
-                    {userId ? (
-                        <div className="flex items-center gap-2">
-                            <form action={logoutAction}>
-                                <button className="btn-secondary !py-1.5">
-                                    Sign out
-                                </button>
-                            </form>
-                            {userDisplayName && (
-                                <span
-                                    className="max-w-[10rem] truncate text-sm text-slate"
-                                    title={userDisplayName}
-                                >
-                                    {userDisplayName}
-                                </span>
-                            )}
-                        </div>
-                    ) : (
-                        <Link href="/login" className="btn-primary !py-1.5">
-                            Sign in
+                        <Link
+                            href="/products"
+                            className="px-2 py-1 text-sm font-medium hover:text-accent"
+                        >
+                            Shop
                         </Link>
-                    )}
-                </nav>
-            </div>
-        </header>
-    );
+                        <Suspense
+                            fallback={
+                                <span className="px-2 text-sm">Cart</span>
+                            }
+                        >
+                            <WishlishLink userId={userId} />
+                        </Suspense>
+                        <Suspense
+                            fallback={
+                                <span className="px-2 text-sm">Cart</span>
+                            }
+                        >
+                            <CartLink userId={userId} />
+                        </Suspense>
+                        {userId ? (
+                            <div className="flex items-center gap-2">
+                                <form action={logoutAction}>
+                                    <button className="btn-secondary !py-1.5">
+                                        Sign out
+                                    </button>
+                                </form>
+                                {userDisplayName && (
+                                    <span
+                                        className="max-w-[10rem] truncate text-sm text-slate"
+                                        title={userDisplayName}
+                                    >
+                                        {userDisplayName}
+                                    </span>
+                                )}
+                            </div>
+                        ) : (
+                            <Link href="/login" className="btn-primary !py-1.5">
+                                Sign in
+                            </Link>
+                        )}
+                    </nav>
+                </div>
+            </header>
+        );
+    } catch (e) {
+        unstable_rethrow(e);
+        //log the error on the server
+        console.error("[header] session lookup failed", e);
+        return (
+            <header className="border-b border-line bg-surface">
+                <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3 sm:px-6">
+                    <Link href="/" className="text-xl font-bold tracking-tight">
+                        {SITE_NAME}
+                    </Link>
+                    <p role="alert" className="ml-auto text-sm text-danger">
+                        We couldn&apos;t check your sign-in status.{" "}
+                        <RetryButton />
+                    </p>
+                </div>
+            </header>
+        );
+    }
 }
