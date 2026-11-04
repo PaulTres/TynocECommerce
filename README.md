@@ -31,13 +31,13 @@ All runtime database requests go through the Neon Data API. The server sends the
 
 ## Environment variables
 
-| Variable | Required | Description |
-| --- | --- | --- |
-| NEON_DATA_API_URL | yes | Data API URL copied from the Neon Console for this branch and database |
-| NEON_AUTH_BASE_URL | yes | Neon Managed Auth URL for this branch |
-| NEON_AUTH_COOKIE_SECRET | yes | Random secret of at least 32 characters |
-| DIRECT_URL | migration/seed only | Neon owner connection string; keep out of the deployed app |
-| UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN | for rate limiting | Upstash Redis credentials |
+| Variable                                          | Required            | Description                                                            |
+| ------------------------------------------------- | ------------------- | ---------------------------------------------------------------------- |
+| NEON_DATA_API_URL                                 | yes                 | Data API URL copied from the Neon Console for this branch and database |
+| NEON_AUTH_BASE_URL                                | yes                 | Neon Managed Auth URL for this branch                                  |
+| NEON_AUTH_COOKIE_SECRET                           | yes                 | Random secret of at least 32 characters                                |
+| DIRECT_URL                                        | migration/seed only | Neon owner connection string; keep out of the deployed app             |
+| UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN | for rate limiting   | Upstash Redis credentials                                              |
 
 ## Neon setup
 
@@ -69,20 +69,19 @@ Useful scripts: pnpm run typecheck, pnpm run test, pnpm run lint, and pnpm run b
 
 ## API reference
 
-GET /api/products, 
+GET /api/products,
 
-GET /api/products/:id, 
+GET /api/products/:id,
 
-GET /api/categories (public); 
+GET /api/categories (public);
 
-GET|POST /api/cart, 
+GET|POST /api/cart,
 
-PATCH|DELETE /api/cart/:productId, 
+PATCH|DELETE /api/cart/:productId,
 
-GET|POST /api/wishlist, 
+GET|POST /api/wishlist,
 
-DELETE /api/wishlist/:productId (auth required); 
-
+DELETE /api/wishlist/:productId (auth required);
 
 POST /api/auth/register.
 
@@ -95,3 +94,8 @@ POST /api/auth/register.
 <img width="1920" height="875" alt="cart" src="https://github.com/user-attachments/assets/b68dbc72-d7a4-49a4-9a86-c14170d1d7c3" />
 <img width="1920" height="781" alt="wishlist" src="https://github.com/user-attachments/assets/33cd8477-34d2-4066-8a11-406fdd5307fe" />
 <img width="1920" height="890" alt="related" src="https://github.com/user-attachments/assets/350e2360-1967-4f94-9b60-bc3fed2902be" />
+
+## Limitations
+
+Currency currently only supports USD.
+No Captcha or password reset.

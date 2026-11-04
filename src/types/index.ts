@@ -10,11 +10,6 @@ export interface User {
     createdAt: string; // ISO-8601
 }
 
-/** Legacy fixture shape retained for the pre-Neon Auth tests; never persisted. */
-export interface UserRecord extends User {
-    passwordHash: string;
-}
-
 export interface Category {
     slug: string; // doubles as the unique id and URL segment
     name: string;
@@ -58,7 +53,7 @@ export interface Cart {
     lines: CartLine[];
     itemCount: number; // sum of quantities
     subtotalCents: number;
-    currency: "USD";
+    currency: string;
 }
 
 export interface WishlistItemRecord {

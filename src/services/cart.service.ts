@@ -9,7 +9,7 @@ import type { Cart, CartLine } from "@/types";
  * Reads cart rows, gets the products, joins them in memory, then
  * sums integer cents. Prices come from the product table at read time, so a price change
  * is reflected immediately and the client can never tamper with prices.
- * Rows whose product was deleted are skipped(implement cleanup in the future).
+ * Rows whose product was deleted are skipped(unlikely to be an issue thanks to DB cascading delete).
  */
 export async function getCart(userId: string): Promise<Cart> {
     const rows = await cartRepo.listCartItems(userId);
@@ -21,7 +21,7 @@ export async function getCart(userId: string): Promise<Cart> {
     const lines: CartLine[] = [];
     for (const row of rows) {
         const product = byId.get(row.productId);
-        if (!product) continue; //skip deleted products
+        if (!product) continue; //skip deleted products; this is unlikely to be an issue, as the DB should account with cascading delete for deleted products
         lines.push({
             product,
             quantity: row.quantity,
