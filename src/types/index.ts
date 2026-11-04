@@ -76,6 +76,7 @@ export interface ProductQuery {
     sort?: ProductSort;
     limit?: number;
     cursor?: string;
+    featured?: boolean;
 }
 
 /** Cursor page. `nextCursor === null` means there is nothing more to load. */

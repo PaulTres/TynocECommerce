@@ -120,6 +120,7 @@ export async function queryProducts(q: ProductQuery): Promise<Page<Product>> {
     });
     const logicGroups: string[] = [];
 
+    if (q.featured) query.set("featured", `eq.${q.featured}`);
     if (q.categorySlug) query.set("categorySlug", `eq.${q.categorySlug}`);
     if (q.minPriceCents !== undefined)
         query.set("priceCents", "gte." + String(q.minPriceCents));

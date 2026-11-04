@@ -12,8 +12,12 @@ export async function searchProducts(
 
 /** Featured products for the homepage. */
 export async function getFeaturedProducts(limit = 4): Promise<Product[]> {
-    const page = await productsRepo.queryProducts({ limit: 24 });
-    return page.items.filter((p) => p.featured).slice(0, limit);
+    return (
+        await productsRepo.queryProducts({
+            limit: limit,
+            featured: true,
+        })
+    ).items;
 }
 
 /** Newest products for the "new arrivals" shelf. */
