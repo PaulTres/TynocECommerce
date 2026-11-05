@@ -15,7 +15,6 @@ export default defineConfig({
         globals: true,
         clearMocks: true,
         restoreMocks: true,
-
         server: {
             deps: {
                 inline: ["next-auth"],

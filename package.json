@@ -8,7 +8,7 @@
         "start": "next start",
         "lint": "eslint",
         "typecheck": "tsc --noEmit",
-        "test": "vitest run",
+        "test": "vitest",
         "db:push": "dotenv -e .env.local -- prisma db push",
         "db:rls": "dotenv -e .env.local -- prisma db execute --file prisma/rls.sql --schema prisma/schema.prisma",
         "db:app-user": "dotenv -e .env.local -- prisma db execute --file prisma/app-user-mapping.sql --schema prisma/schema.prisma",
