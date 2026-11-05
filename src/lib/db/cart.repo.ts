@@ -1,5 +1,7 @@
 import { ConflictError, NotFoundError } from "@/lib/errors";
 import type { CartItemRecord } from "@/types";
+import { MAX_QTY_PER_ITEM } from "../constants";
+import { isNaturalNumber } from "../utils";
 import { dataApi } from "./data-api";
 
 function asIso(value: Date | string): string {
@@ -50,6 +52,8 @@ export async function incrementItem(
     qty: number,
     cap: number,
 ): Promise<number> {
+    if (qty <= 0 || !isNaturalNumber(qty))
+        throw new ConflictError(`Invalid quantity ${qty}`);
     if (qty > cap)
         throw new ConflictError(`You can add at most ${cap} of this item`);
 
@@ -75,6 +79,8 @@ export async function setQuantity(
     productId: string,
     quantity: number,
 ): Promise<void> {
+    if (!isNaturalNumber(quantity) || quantity > MAX_QTY_PER_ITEM)
+        throw new ConflictError(`Invalid quantity ${quantity}!`);
     const query = new URLSearchParams({
         userId: `eq.${userId}`,
         productId: `eq.${productId}`,
