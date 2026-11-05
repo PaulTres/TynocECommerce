@@ -1,7 +1,7 @@
 import * as categoriesRepo from "@/lib/db/categories.repo";
 import * as productsRepo from "@/lib/db/products.repo";
 import { ConflictError, NotFoundError } from "@/lib/errors";
-import { isInteger, isNaturalNumber } from "@/lib/utils";
+import { isNaturalNumber } from "@/lib/utils";
 import type { Category, Page, Product, ProductQuery } from "@/types";
 
 /** Searches/filters the catalogue. */
