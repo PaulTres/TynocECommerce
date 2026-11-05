@@ -49,6 +49,7 @@ export interface CartLine {
     exceedsStock: boolean;
 }
 
+/** Cart containing cart lines, sum of quantities, subtotalCents and the type of currency(currently unused). */
 export interface Cart {
     lines: CartLine[];
     itemCount: number; // sum of quantities
@@ -56,6 +57,7 @@ export interface Cart {
     currency: string;
 }
 
+/** Record for keeping track of wishlist items. */
 export interface WishlistItemRecord {
     productId: string;
     addedAt: string;
@@ -63,6 +65,7 @@ export interface WishlistItemRecord {
 
 export type ProductSort = "newest" | "price-asc" | "price-desc";
 
+/** Interface used to build queries for products. */
 export interface ProductQuery {
     search?: string;
     categorySlug?: string;

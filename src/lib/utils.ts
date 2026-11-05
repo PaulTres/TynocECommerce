@@ -1,4 +1,4 @@
-export { cn } from "cn"
+export { cn } from "cn";
 
 /** Formats integer cents as a localized currency string. */
 export function formatPrice(cents: number, currency = "USD"): string {
@@ -33,3 +33,5 @@ export function safeRedirectPath(
     }
     return target;
 }
+
+export const isInteger = (num: number) => num === ~~num;

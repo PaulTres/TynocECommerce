@@ -2,13 +2,14 @@ import { MAX_QTY_PER_ITEM } from "@/lib/constants";
 import * as cartRepo from "@/lib/db/cart.repo";
 import * as productsRepo from "@/lib/db/products.repo";
 import { ConflictError, NotFoundError } from "@/lib/errors";
+import { isInteger } from "@/lib/utils";
 import type { Cart, CartLine } from "@/types";
 
 /**
  * Builds the user's cart with live product data and totals.
  * Reads cart rows, gets the products, joins them in memory, then
  * sums integer cents. Prices come from the product table at read time, so a price change
- * is reflected immediately and the client can never tamper with prices.
+ * is reflected immediately.
  * Rows whose product was deleted are skipped(unlikely to be an issue thanks to DB cascading delete).
  */
 export async function getCart(userId: string): Promise<Cart> {
@@ -56,6 +57,13 @@ export async function addToCart(
     if (!product) throw new NotFoundError("Product not found");
     if (product.stock <= 0)
         throw new ConflictError("This product is out of stock");
+    if (
+        quantity <= 0 ||
+        isNaN(quantity) ||
+        !isFinite(quantity) ||
+        !isInteger(quantity)
+    )
+        throw new ConflictError(`Invalid quantity ${quantity}!`);
     return cartRepo.incrementItem(
         userId,
         productId,
@@ -71,6 +79,13 @@ export async function updateQuantity(
     quantity: number,
 ): Promise<void> {
     if (quantity === 0) return cartRepo.removeItem(userId, productId);
+    if (
+        quantity < 0 ||
+        isNaN(quantity) ||
+        !isFinite(quantity) ||
+        !isInteger(quantity)
+    )
+        throw new ConflictError(`Invalid quantity ${quantity}!`);
     const product = await productsRepo.getProduct(productId);
     if (!product) throw new NotFoundError("Product not found");
     const cap = Math.min(MAX_QTY_PER_ITEM, product.stock);
