@@ -34,4 +34,7 @@ export function safeRedirectPath(
     return target;
 }
 
+/**Truncates the decimal part of a number and returns the integer portion. */
 export const isInteger = (num: number) => num === ~~num;
+
+export const isNaturalNumber = (num: number) => isInteger(num) && num >= 0;

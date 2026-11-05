@@ -2,7 +2,7 @@ import { MAX_QTY_PER_ITEM } from "@/lib/constants";
 import * as cartRepo from "@/lib/db/cart.repo";
 import * as productsRepo from "@/lib/db/products.repo";
 import { ConflictError, NotFoundError } from "@/lib/errors";
-import { isInteger } from "@/lib/utils";
+import { isNaturalNumber } from "@/lib/utils";
 import type { Cart, CartLine } from "@/types";
 
 /**
@@ -57,12 +57,7 @@ export async function addToCart(
     if (!product) throw new NotFoundError("Product not found");
     if (product.stock <= 0)
         throw new ConflictError("This product is out of stock");
-    if (
-        quantity <= 0 ||
-        isNaN(quantity) ||
-        !isFinite(quantity) ||
-        !isInteger(quantity)
-    )
+    if (quantity === 0 || !isNaturalNumber(quantity))
         throw new ConflictError(`Invalid quantity ${quantity}!`);
     return cartRepo.incrementItem(
         userId,
@@ -79,12 +74,7 @@ export async function updateQuantity(
     quantity: number,
 ): Promise<void> {
     if (quantity === 0) return cartRepo.removeItem(userId, productId);
-    if (
-        quantity < 0 ||
-        isNaN(quantity) ||
-        !isFinite(quantity) ||
-        !isInteger(quantity)
-    )
+    if (!isNaturalNumber(quantity))
         throw new ConflictError(`Invalid quantity ${quantity}!`);
     const product = await productsRepo.getProduct(productId);
     if (!product) throw new NotFoundError("Product not found");

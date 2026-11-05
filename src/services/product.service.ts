@@ -1,6 +1,7 @@
 import * as categoriesRepo from "@/lib/db/categories.repo";
 import * as productsRepo from "@/lib/db/products.repo";
-import { NotFoundError } from "@/lib/errors";
+import { ConflictError, NotFoundError } from "@/lib/errors";
+import { isInteger, isNaturalNumber } from "@/lib/utils";
 import type { Category, Page, Product, ProductQuery } from "@/types";
 
 /** Searches/filters the catalogue. */
@@ -11,7 +12,11 @@ export async function searchProducts(
 }
 
 /** Featured products for the homepage. */
-export async function getFeaturedProducts(limit = 4): Promise<Product[]> {
+export async function getFeaturedProducts(
+    limit: number = 4,
+): Promise<Product[]> {
+    if (!isNaturalNumber(limit))
+        throw new ConflictError(`Invalid limit ${limit}!`);
     return (
         await productsRepo.queryProducts({
             limit: limit,
@@ -21,7 +26,9 @@ export async function getFeaturedProducts(limit = 4): Promise<Product[]> {
 }
 
 /** Newest products for the "new arrivals" shelf. */
-export async function getNewArrivals(limit = 4): Promise<Product[]> {
+export async function getNewArrivals(limit: number = 4): Promise<Product[]> {
+    if (!isNaturalNumber(limit))
+        throw new ConflictError(`Invalid limit ${limit}!`);
     return (await productsRepo.queryProducts({ limit })).items;
 }
 

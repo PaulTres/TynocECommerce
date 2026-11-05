@@ -6,6 +6,7 @@ import type { Product } from "@/types";
 /** Returns the wishlisted products newest first, skipping products that no longer exist. */
 export async function getWishlist(userId: string): Promise<Product[]> {
     const rows = await wishlistRepo.listWishlist(userId);
+    if (!rows.length) return [];
     const products = await productsRepo.batchGetProducts(
         rows.map((r) => r.productId),
     );

@@ -91,7 +91,7 @@ describe("getCart", () => {
 
         await getCart(USER_ID);
 
-        expect(cartMocks.listCartItems).toHaveBeenCalledOnce();
+        expect(cartMocks.listCartItems).toHaveBeenCalledTimes(1);
         expect(cartMocks.listCartItems).toHaveBeenCalledWith(USER_ID);
     });
 
@@ -305,7 +305,7 @@ describe("getCartCount", () => {
         cartMocks.sumCartQuantities.mockResolvedValue(7);
 
         await expect(getCartCount(USER_ID)).resolves.toBe(7);
-        expect(cartMocks.sumCartQuantities).toHaveBeenCalledOnce();
+        expect(cartMocks.sumCartQuantities).toHaveBeenCalledTimes(1);
         expect(cartMocks.sumCartQuantities).toBeCalledWith(USER_ID);
     });
 
@@ -374,7 +374,7 @@ describe("addToCart", () => {
 
             await addToCart(USER_ID, "p-42", 1);
 
-            expect(productMocks.getProduct).toHaveBeenCalledOnce();
+            expect(productMocks.getProduct).toHaveBeenCalledTimes(1);
             expect(productMocks.getProduct).toBeCalledWith("p-42");
         });
     });
@@ -400,7 +400,7 @@ describe("addToCart", () => {
 
                 await addToCart(USER_ID, PRODUCT_ID, 1);
 
-                expect(cartMocks.incrementItem).toHaveBeenCalledOnce();
+                expect(cartMocks.incrementItem).toHaveBeenCalledTimes(1);
                 expect(cartMocks.incrementItem).toHaveBeenCalledWith(
                     USER_ID,
                     PRODUCT_ID,
@@ -525,7 +525,7 @@ describe("addToCart", () => {
 
                 await updateQuantity(USER_ID, PRODUCT_ID, 0);
 
-                expect(cartMocks.removeItem).toHaveBeenCalledOnce();
+                expect(cartMocks.removeItem).toHaveBeenCalledTimes(1);
                 expect(cartMocks.removeItem).toHaveBeenCalledWith(
                     USER_ID,
                     PRODUCT_ID,
@@ -619,7 +619,7 @@ describe("addToCart", () => {
 
                 await updateQuantity(USER_ID, PRODUCT_ID, 5);
 
-                expect(cartMocks.setQuantity).toHaveBeenCalledOnce();
+                expect(cartMocks.setQuantity).toHaveBeenCalledTimes(1);
                 expect(cartMocks.setQuantity).toHaveBeenCalledWith(
                     USER_ID,
                     PRODUCT_ID,
@@ -712,7 +712,7 @@ describe("addToCart", () => {
                 await expect(
                     updateQuantity(USER_ID, PRODUCT_ID, 0),
                 ).resolves.toBeUndefined();
-                expect(cartMocks.removeItem).toHaveBeenCalledOnce();
+                expect(cartMocks.removeItem).toHaveBeenCalledTimes(1);
                 expect(cartMocks.removeItem).toHaveBeenCalledWith(
                     USER_ID,
                     PRODUCT_ID,
@@ -725,7 +725,7 @@ describe("addToCart", () => {
                 await expect(
                     updateQuantity(USER_ID, PRODUCT_ID, 1),
                 ).resolves.toBeUndefined();
-                expect(cartMocks.setQuantity).toHaveBeenCalledOnce();
+                expect(cartMocks.setQuantity).toHaveBeenCalledTimes(1);
                 expect(cartMocks.setQuantity).toHaveBeenCalledWith(
                     USER_ID,
                     PRODUCT_ID,
@@ -741,7 +741,7 @@ describe("addToCart", () => {
 
             await removeFromCart(USER_ID, PRODUCT_ID);
 
-            expect(cartMocks.removeItem).toHaveBeenCalledOnce();
+            expect(cartMocks.removeItem).toHaveBeenCalledTimes(1);
             expect(cartMocks.removeItem).toHaveBeenCalledWith(
                 USER_ID,
                 PRODUCT_ID,
