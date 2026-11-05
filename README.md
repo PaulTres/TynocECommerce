@@ -2,6 +2,8 @@
 
 A full-stack storefront where users browse and search products, keep a cart and a wishlist, and authenticate with Neon Managed Auth.
 
+[Demo](https://tynoc-e-commerce-three.vercel.app/)
+
 ## Features
 
 - Homepage, categories, product listing, product detail, related products
