@@ -1,14 +1,14 @@
 import {
-  MAX_CATEGORY_LENGTH,
-  MAX_CURSOR_LENGTH,
-  MAX_EMAIL_LENGTH,
-  MAX_NAME_LENGTH,
-  MAX_PASS_LENGTH,
-  MAX_PRODUCT_ID_LENGTH,
-  MAX_QTY_PER_ITEM,
-  MIN_PASS_LENGTH,
-  PAGE_SIZE,
-  PRODUCT_ID_PATTERN,
+    MAX_CATEGORY_LENGTH,
+    MAX_CURSOR_LENGTH,
+    MAX_EMAIL_LENGTH,
+    MAX_NAME_LENGTH,
+    MAX_PASS_LENGTH,
+    MAX_PRODUCT_ID_LENGTH,
+    MAX_QTY_PER_ITEM,
+    MIN_PASS_LENGTH,
+    PAGE_SIZE,
+    PRODUCT_ID_PATTERN,
 } from "@/lib/constants";
 import { z } from "zod";
 
@@ -62,6 +62,11 @@ export const updateCartSchema = z.object({
 
 export const wishlistSchema = z.object({ productId: productIdSchema });
 
+const optionalNumber = z.preprocess(
+    (value) => (value === "" || value === undefined ? undefined : value),
+    z.coerce.number().min(0).finite().optional(),
+);
+
 /** Query-string schema for the product listing; bad values throw. */
 export const productQuerySchema = z
     .object({
@@ -71,11 +76,12 @@ export const productQuerySchema = z
             .regex(PRODUCT_ID_PATTERN)
             .max(MAX_CATEGORY_LENGTH)
             .optional(),
-        min: z.coerce.number().min(0).max(1_000_000).optional(),
-        max: z.coerce.number().min(0).max(1_000_000).optional(),
+        min: optionalNumber,
+        max: optionalNumber,
         sort: z.enum(["newest", "price-asc", "price-desc"]).default("newest"),
         limit: z.coerce.number().int().min(1).max(48).default(PAGE_SIZE),
-        cursor: z.string().max(MAX_CURSOR_LENGTH).optional(),
+        nextCursor: z.string().max(MAX_CURSOR_LENGTH).optional(),
+        prevCursor: z.string().max(MAX_CURSOR_LENGTH).optional(),
     })
     .refine(
         (v) => v.min === undefined || v.max === undefined || v.min <= v.max,

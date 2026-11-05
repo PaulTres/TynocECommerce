@@ -75,27 +75,40 @@ export async function batchGetProducts(ids: string[]): Promise<Product[]> {
 }
 
 export async function queryProducts(q: ProductQuery): Promise<Page<Product>> {
+    //prevents ambiguous pagination requests
+    if (q.nextCursor && q.prevCursor) {
+        throw new ValidationError("Cannot use both pagination cursors");
+    }
+
     const limit = Math.max(1, Math.min(q.limit ?? PAGE_SIZE, API_LIMIT));
     const sort = q.sort ?? "newest";
-    const afterId = decodeCursor(q.cursor);
+    const isPrevious = Boolean(q.prevCursor);
+    const cursorId = decodeCursor(q.prevCursor ?? q.nextCursor);
+
     const query = new URLSearchParams({
         select: PRODUCT_COLUMNS,
         limit: String(limit + 1),
     });
+
     const logicGroups: string[] = [];
 
+    // Apply the regular product filters.
     if (q.featured) query.set("featured", `eq.${q.featured}`);
     if (q.categorySlug) query.set("categorySlug", `eq.${q.categorySlug}`);
-    if (q.minPriceCents !== undefined)
+
+    if (q.minPriceCents !== undefined) {
         query.set("priceCents", "gte." + String(q.minPriceCents));
+    }
+
     if (q.maxPriceCents !== undefined) {
-        // PostgREST accepts repeated filters for one column as an implicit AND.
         query.append("priceCents", "lte." + String(q.maxPriceCents));
     }
+
     if (q.search?.trim()) {
         const search = q.search.trim();
         const pattern = quoteFilterValue("%" + escapeLike(search) + "%");
         const tag = quoteFilterValue(search.toLowerCase());
+
         logicGroups.push(
             "or(name.ilike." +
                 pattern +
@@ -107,78 +120,132 @@ export async function queryProducts(q: ProductQuery): Promise<Page<Product>> {
         );
     }
 
+    // Retrieve the sorting values of the cursor product.
     let cursorRow: ProductCursorRow | null = null;
-    if (afterId) {
+
+    if (cursorId) {
         const cursorQuery = new URLSearchParams({
             select: "id,priceCents,createdAt",
-            id: `eq.${afterId}`,
+            id: `eq.${cursorId}`,
             limit: "1",
         });
+
         const cursorRows = await dataApi<ProductCursorRow[]>("Product", {
             access: "anonymous",
             query: cursorQuery,
         });
+
         cursorRow = cursorRows[0] ?? null;
-        if (!cursorRow) throw new ValidationError("Invalid pagination cursor");
+
+        if (!cursorRow) {
+            throw new ValidationError("Invalid pagination cursor");
+        }
     }
 
+    // Apply the appropriate keyset condition for the requested direction.
     if (cursorRow) {
-        const cursorId = quoteFilterValue(cursorRow.id);
-        if (sort === "price-asc") {
+        const id = quoteFilterValue(cursorRow.id);
+
+        if (sort === "price-asc" || sort === "price-desc") {
+            const isAscending = sort === "price-asc";
+
+            // Forward follows the selected sort order.
+            // Backward uses the inverse comparison.
+            const priceOperator = isAscending
+                ? isPrevious
+                    ? "lt"
+                    : "gt"
+                : isPrevious
+                  ? "gt"
+                  : "lt";
+
+            const idOperator = isPrevious ? "lt" : "gt";
+
             logicGroups.push(
-                "or(priceCents.gt." +
+                "or(priceCents." +
+                    priceOperator +
+                    "." +
                     cursorRow.priceCents +
                     ",and(priceCents.eq." +
                     cursorRow.priceCents +
-                    ",id.gt." +
-                    cursorId +
-                    "))",
-            );
-        } else if (sort === "price-desc") {
-            logicGroups.push(
-                "or(priceCents.lt." +
-                    cursorRow.priceCents +
-                    ",and(priceCents.eq." +
-                    cursorRow.priceCents +
-                    ",id.gt." +
-                    cursorId +
+                    ",id." +
+                    idOperator +
+                    "." +
+                    id +
                     "))",
             );
         } else {
             const createdAt = quoteFilterValue(cursorRow.createdAt);
+
             logicGroups.push(
-                "or(createdAt.lt." +
+                "or(createdAt." +
+                    (isPrevious ? "gt." : "lt.") +
                     createdAt +
                     ",and(createdAt.eq." +
                     createdAt +
-                    ",id.lt." +
-                    cursorId +
+                    ",id." +
+                    (isPrevious ? "gt." : "lt.") +
+                    id +
                     "))",
             );
         }
     }
 
-    if (logicGroups.length === 1) query.set("or", logicGroups[0].slice(2));
-    else if (logicGroups.length > 1)
+    // Combine search and pagination conditions.
+    if (logicGroups.length === 1) {
+        query.set("or", logicGroups[0].slice(2));
+    } else if (logicGroups.length > 1) {
         query.set("and", "(" + logicGroups.join(",") + ")");
+    }
 
+    // Reverse the database ordering when fetching a previous page.
     const order =
         sort === "price-asc"
-            ? "priceCents.asc,id.asc"
+            ? isPrevious
+                ? "priceCents.desc,id.desc"
+                : "priceCents.asc,id.asc"
             : sort === "price-desc"
-              ? "priceCents.desc,id.asc"
-              : "createdAt.desc,id.desc";
+              ? isPrevious
+                  ? "priceCents.asc,id.desc"
+                  : "priceCents.desc,id.asc"
+              : isPrevious
+                ? "createdAt.asc,id.asc"
+                : "createdAt.desc,id.desc";
+
     query.set("order", order);
 
+    // Fetch one extra record to determine whether another page exists.
     const rows = await dataApi<ProductRow[]>("Product", {
         access: "anonymous",
         query,
     });
+
     const hasMore = rows.length > limit;
-    const items = rows.slice(0, limit).map(toProduct);
+
+    // Keep the closest records to the cursor and restore display ordering.
+    const pageRows = isPrevious
+        ? rows.slice(0, limit).reverse()
+        : rows.slice(0, limit);
+
+    const items = pageRows.map(toProduct);
+
+    // Generate navigation cursors from the first and last displayed products.
+    const firstId = items[0]?.id;
+    const lastId = items.at(-1)?.id;
+
     return {
         items,
-        nextCursor: hasMore ? encodeCursor(items.at(-1)?.id) : undefined,
+        // Forward navigation exists if more records were found after this page.
+        nextCursor:
+            lastId !== undefined && (isPrevious || hasMore)
+                ? encodeCursor(lastId)
+                : undefined,
+        // Backward navigation exists if more records were found before this page.
+        prevCursor:
+            firstId !== undefined &&
+            (!isPrevious && cursorId ? true : isPrevious && hasMore)
+                ? encodeCursor(firstId)
+                : undefined,
     };
 }
 

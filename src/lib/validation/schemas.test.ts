@@ -520,7 +520,7 @@ describe("productQuerySchema", () => {
                 expect(result.data.category).toBeUndefined();
                 expect(result.data.min).toBeUndefined();
                 expect(result.data.max).toBeUndefined();
-                expect(result.data.cursor).toBeUndefined();
+                expect(result.data.nextCursor).toBeUndefined();
             }
         });
     });
@@ -601,13 +601,10 @@ describe("productQuerySchema", () => {
             ).toBe(true);
         });
 
-        it("rejects negative and over-limit values", () => {
+        it("rejects negative values", () => {
             expect(
                 issuePaths(productQuerySchema.safeParse({ min: -1 })),
             ).toContain("min");
-            expect(
-                issuePaths(productQuerySchema.safeParse({ max: 1_000_001 })),
-            ).toContain("max");
         });
 
         it("rejects NaN, Infinity and non-numeric strings", () => {
@@ -618,9 +615,9 @@ describe("productQuerySchema", () => {
             }
         });
 
-        it("documents current behaviour: an empty string coerces to 0 (so '?min=' silently means min=0)", () => {
+        it("turns empty price string to undefined", () => {
             const result = productQuerySchema.safeParse({ min: "" });
-            expect(result.success && result.data.min).toBe(0);
+            expect(result.success && result.data.min).toBe(undefined);
         });
 
         it("accepts min === max", () => {
@@ -694,12 +691,12 @@ describe("productQuerySchema", () => {
         it(`accepts up to ${MAX_CURSOR_LENGTH} characters and rejects ${MAX_CURSOR_LENGTH + 1}`, () => {
             expect(
                 productQuerySchema.safeParse({
-                    cursor: "c".repeat(MAX_CURSOR_LENGTH),
+                    nextCursor: "c".repeat(MAX_CURSOR_LENGTH),
                 }).success,
             ).toBe(true);
             expect(
                 productQuerySchema.safeParse({
-                    cursor: "c".repeat(MAX_CURSOR_LENGTH + 1),
+                    nextCursor: "c".repeat(MAX_CURSOR_LENGTH + 1),
                 }).success,
             ).toBe(false);
         });
@@ -732,7 +729,8 @@ describe("productQuerySchema", () => {
             max: "200",
             sort: "price-asc",
             limit: "24",
-            cursor: "abc123",
+            nextCursor: "abc123",
+            prevCursor: "blabla",
         });
         expect(result.success).toBe(true);
         if (result.success) {
@@ -743,7 +741,8 @@ describe("productQuerySchema", () => {
                 max: 200,
                 sort: "price-asc",
                 limit: 24,
-                cursor: "abc123",
+                nextCursor: "abc123",
+                prevCursor: "blabla",
             });
         }
     });

@@ -282,7 +282,7 @@ describe("queryProducts - cursor validation", () => {
         dataApiMock.mockResolvedValueOnce([]); // cursor lookup
 
         await expect(
-            queryProducts({ cursor: encodeCursor("gone") }),
+            queryProducts({ nextCursor: encodeCursor("gone") }),
         ).rejects.toBeInstanceOf(ValidationError);
         expect(dataApiMock).toHaveBeenCalledTimes(1);
     });
@@ -292,7 +292,7 @@ describe("queryProducts - cursor validation", () => {
             .mockResolvedValueOnce([CURSOR_ROW])
             .mockResolvedValueOnce([]);
 
-        await queryProducts({ cursor: encodeCursor("abc") });
+        await queryProducts({ nextCursor: encodeCursor("abc") });
 
         expect(dataApiMock).toHaveBeenCalledTimes(2);
         const first = call(0).opts.query;
@@ -314,21 +314,21 @@ describe("queryProducts - keyset conditions", () => {
     const quotedDate = JSON.stringify(CURSOR_ROW.createdAt);
 
     it("newest: createdAt < cursor OR (equal AND id < cursor id)", async () => {
-        await queryProducts({ cursor: cursor(), sort: "newest" });
+        await queryProducts({ nextCursor: cursor(), sort: "newest" });
         expect(call().opts.query.get("or")).toBe(
             `(createdAt.lt.${quotedDate},and(createdAt.eq.${quotedDate},id.lt.${quotedId}))`,
         );
     });
 
     it("price-asc: price > cursor OR (equal AND id > cursor id)", async () => {
-        await queryProducts({ cursor: cursor(), sort: "price-asc" });
+        await queryProducts({ nextCursor: cursor(), sort: "price-asc" });
         expect(call().opts.query.get("or")).toBe(
             `(priceCents.gt.500,and(priceCents.eq.500,id.gt.${quotedId}))`,
         );
     });
 
     it("price-desc: price < cursor OR (equal AND id > cursor id)", async () => {
-        await queryProducts({ cursor: cursor(), sort: "price-desc" });
+        await queryProducts({ nextCursor: cursor(), sort: "price-desc" });
         expect(call().opts.query.get("or")).toBe(
             `(priceCents.lt.500,and(priceCents.eq.500,id.gt.${quotedId}))`,
         );
@@ -337,7 +337,7 @@ describe("queryProducts - keyset conditions", () => {
 
     it("combines search + cursor into a single and(or(...),or(...))", async () => {
         await queryProducts({
-            cursor: cursor(),
+            nextCursor: cursor(),
             sort: "price-asc",
             search: "foo",
         });
@@ -397,7 +397,7 @@ describe("queryProducts - result paging", () => {
             .mockResolvedValueOnce([{ ...CURSOR_ROW, id: "a" }]) // cursor lookup
             .mockResolvedValueOnce([]); // page query
         await expect(
-            queryProducts({ limit: 1, cursor: first.nextCursor! }),
+            queryProducts({ limit: 1, nextCursor: first.nextCursor! }),
         ).resolves.toEqual({ items: [], nextCursor: undefined });
         expect(call(1).opts.query.get("id")).toBe("eq.a");
     });

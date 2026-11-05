@@ -73,13 +73,15 @@ export interface ProductQuery {
     maxPriceCents?: number;
     sort?: ProductSort;
     limit?: number;
-    cursor?: string;
+    nextCursor?: string;
+    prevCursor?: string;
     featured?: boolean;
 }
 
-/** Cursor page. `nextCursor === undefined` means there is nothing more to load. */
+/** Cursor page. `cursor === undefined` means there is nothing more to load. */
 export interface Page<T> {
     items: T[];
+    prevCursor: string | undefined;
     nextCursor: string | undefined;
 }
 
