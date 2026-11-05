@@ -2,9 +2,14 @@ import type { WishlistItemRecord } from "@/types";
 import { dataApi } from "./data-api";
 
 function asIso(value: Date | string): string {
-    return value instanceof Date
-        ? value.toISOString()
-        : new Date(value).toISOString();
+    try {
+        return value instanceof Date
+            ? value.toISOString()
+            : new Date(value).toISOString();
+    } catch (e) {
+        console.error(e);
+        return "unknown";
+    }
 }
 
 export async function wishlistCount(userId: string): Promise<number> {
@@ -37,7 +42,7 @@ export async function listWishlist(
     >("WishlistItem", { access: "authenticated", query });
     return rows.map((row) => ({
         productId: String(row.productId),
-        addedAt: asIso(row.addedAt as Date | string),
+        addedAt: asIso(row.addedAt as string | Date),
     }));
 }
 
