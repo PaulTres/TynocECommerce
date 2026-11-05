@@ -1,16 +1,6 @@
 import type { WishlistItemRecord } from "@/types";
 import { dataApi } from "./data-api";
-
-function asIso(value: Date | string): string {
-    try {
-        return value instanceof Date
-            ? value.toISOString()
-            : new Date(value).toISOString();
-    } catch (e) {
-        console.error(e);
-        return "unknown";
-    }
-}
+import { asIso } from "../utils";
 
 export async function wishlistCount(userId: string): Promise<number> {
     const query = new URLSearchParams({

@@ -1,56 +1,20 @@
 import { API_LIMIT, PAGE_SIZE } from "@/lib/constants";
-import { ValidationError } from "@/lib/errors";
-import type { Page, Product, ProductQuery } from "@/types";
+import { ConflictError, ValidationError } from "@/lib/errors";
+import type {
+    Page,
+    Product,
+    ProductCursorRow,
+    ProductQuery,
+    ProductRow,
+} from "@/types";
+import {
+    asIso,
+    decodeCursor,
+    encodeCursor,
+    isNaturalNumber,
+    toStringArray,
+} from "../utils";
 import { dataApi } from "./data-api";
-
-type ProductRow = {
-    id: unknown;
-    name: unknown;
-    description: unknown;
-    priceCents: unknown;
-    currency: unknown;
-    categorySlug: unknown;
-    images: unknown;
-    stock: unknown;
-    tags: unknown;
-    featured: unknown;
-    createdAt: unknown;
-};
-
-type ProductCursorRow = {
-    id: string;
-    priceCents: number;
-    createdAt: string;
-};
-
-function decodeCursor(cursor?: string): string | undefined {
-    if (!cursor) return undefined;
-    try {
-        const id: unknown = JSON.parse(
-            Buffer.from(cursor, "base64url").toString("utf8"),
-        );
-        if (typeof id === "string" && id.length > 0) return id;
-    } catch {
-        // Return the validation error below.
-    }
-    throw new ValidationError("Invalid pagination cursor");
-}
-
-function encodeCursor(id?: string): string | null {
-    return id
-        ? Buffer.from(JSON.stringify(id), "utf8").toString("base64url")
-        : null;
-}
-
-function toIso(value: unknown): string {
-    return value instanceof Date
-        ? value.toISOString()
-        : new Date(String(value)).toISOString();
-}
-
-function toStringArray(value: unknown): string[] {
-    return Array.isArray(value) ? value.map(String) : [];
-}
 
 function toProduct(row: ProductRow): Product {
     return {
@@ -64,7 +28,7 @@ function toProduct(row: ProductRow): Product {
         stock: Number(row.stock),
         tags: toStringArray(row.tags),
         featured: Boolean(row.featured),
-        createdAt: toIso(row.createdAt),
+        createdAt: asIso(row.createdAt),
     };
 }
 
@@ -214,7 +178,7 @@ export async function queryProducts(q: ProductQuery): Promise<Page<Product>> {
     const items = rows.slice(0, limit).map(toProduct);
     return {
         items,
-        nextCursor: hasMore ? encodeCursor(items.at(-1)?.id) : null,
+        nextCursor: hasMore ? encodeCursor(items.at(-1)?.id) : undefined,
     };
 }
 
@@ -222,6 +186,8 @@ export async function getRelated(
     product: Product,
     limit = 4,
 ): Promise<Product[]> {
+    if (limit <= 0 || !isNaturalNumber(limit))
+        throw new ConflictError(`Invalid limit ${limit}!`);
     const query = new URLSearchParams({
         select: PRODUCT_COLUMNS,
         categorySlug: `eq.${product.categorySlug}`,

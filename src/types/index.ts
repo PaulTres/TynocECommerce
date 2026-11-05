@@ -77,10 +77,10 @@ export interface ProductQuery {
     featured?: boolean;
 }
 
-/** Cursor page. `nextCursor === null` means there is nothing more to load. */
+/** Cursor page. `nextCursor === undefined` means there is nothing more to load. */
 export interface Page<T> {
     items: T[];
-    nextCursor: string | null;
+    nextCursor: string | undefined;
 }
 
 /** Uniform return type for server actions. */
@@ -94,3 +94,23 @@ export type ActionResult<T = void> =
               fieldErrors?: Record<string, string[] | undefined>;
           };
       };
+
+export type ProductRow = {
+    id: unknown;
+    name: unknown;
+    description: unknown;
+    priceCents: unknown;
+    currency: unknown;
+    categorySlug: unknown;
+    images: unknown;
+    stock: unknown;
+    tags: unknown;
+    featured: unknown;
+    createdAt: unknown;
+};
+
+export type ProductCursorRow = {
+    id: string;
+    priceCents: number;
+    createdAt: string;
+};
