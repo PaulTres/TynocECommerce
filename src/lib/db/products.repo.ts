@@ -254,7 +254,7 @@ export async function getRelated(
     limit = 4,
 ): Promise<Product[]> {
     if (limit <= 0 || !isNaturalNumber(limit))
-        throw new ConflictError(`Invalid limit ${limit}!`);
+        throw new ValidationError(`Invalid limit ${limit}!`);
     const query = new URLSearchParams({
         select: PRODUCT_COLUMNS,
         categorySlug: `eq.${product.categorySlug}`,

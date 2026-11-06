@@ -5,7 +5,7 @@ vi.mock("@/lib/constants", () => ({ PAGE_SIZE: 20, API_LIMIT: 100 }));
 // Replace the network layer with a spy.
 vi.mock("./data-api", () => ({ dataApi: vi.fn() }));
 
-import { ConflictError, ValidationError } from "@/lib/errors";
+import { ValidationError } from "@/lib/errors";
 import { API_LIMIT } from "../constants";
 import { decodeCursor, encodeCursor } from "../utils";
 import { dataApi } from "./data-api";
@@ -428,6 +428,6 @@ describe("getRelated", () => {
     });
 
     it.each([[2.7], [0], [-3], [NaN]])("throws for limit %s", async (input) => {
-        await expect(getRelated(base, input)).rejects.toThrow(ConflictError);
+        await expect(getRelated(base, input)).rejects.toThrow(ValidationError);
     });
 });
