@@ -1,4 +1,5 @@
 import { requireUserId } from "@/lib/api/session";
+import { AppError } from "@/lib/errors";
 import * as wishlistService from "@/services/wishlist.service";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DELETE } from "./route";
@@ -10,11 +11,6 @@ vi.mock("@/lib/api/session", () => ({
 
 vi.mock("@/services/wishlist.service", () => ({
     removeFromWishlist: vi.fn(),
-}));
-
-// Mock the error handler so route errors can be tested directly.
-vi.mock("@/lib/api/handler", () => ({
-    withErrors: (handler: (...args: any[]) => any) => handler,
 }));
 
 describe("DELETE /api/wishlist/:productId", () => {
@@ -55,17 +51,18 @@ describe("DELETE /api/wishlist/:productId", () => {
     });
 
     it("should propagate authentication errors", async () => {
-        vi.mocked(requireUserId).mockRejectedValue(new Error("Unauthorized"));
+        vi.mocked(requireUserId).mockRejectedValue(
+            new AppError("Unauthorized", 403, "Unauthorized"),
+        );
 
-        await expect(
-            DELETE(
-                new Request(`http://localhost/api/wishlist/${productId}`, {
-                    method: "DELETE",
-                }),
-                createContext(productId),
-            ),
-        ).rejects.toThrow("Unauthorized");
+        const response = await DELETE(
+            new Request(`http://localhost/api/wishlist/${productId}`, {
+                method: "DELETE",
+            }),
+            createContext(productId),
+        );
 
+        expect(response.status).toBe(403);
         expect(wishlistService.removeFromWishlist).not.toHaveBeenCalled();
     });
 
@@ -73,16 +70,14 @@ describe("DELETE /api/wishlist/:productId", () => {
         vi.mocked(requireUserId).mockResolvedValue(userId);
 
         const invalidProductId = "";
+        const response = await DELETE(
+            new Request(`http://localhost/api/wishlist/${invalidProductId}`, {
+                method: "DELETE",
+            }),
+            createContext(invalidProductId), //empty string is invalid as product id
+        );
 
-        await expect(
-            DELETE(
-                new Request(
-                    `http://localhost/api/wishlist/${invalidProductId}`,
-                    { method: "DELETE" },
-                ),
-                createContext(invalidProductId),
-            ),
-        ).rejects.toThrow();
+        expect(response.status).toBe(400);
 
         expect(wishlistService.removeFromWishlist).not.toHaveBeenCalled();
     });
@@ -91,17 +86,21 @@ describe("DELETE /api/wishlist/:productId", () => {
         vi.mocked(requireUserId).mockResolvedValue(userId);
 
         vi.mocked(wishlistService.removeFromWishlist).mockRejectedValue(
-            new Error("Wishlist removal failed"),
+            new AppError(
+                "Wishlist removal failed",
+                500,
+                "Wishlist removal failed",
+            ),
         );
 
-        await expect(
-            DELETE(
-                new Request(`http://localhost/api/wishlist/${productId}`, {
-                    method: "DELETE",
-                }),
-                createContext(productId),
-            ),
-        ).rejects.toThrow("Wishlist removal failed");
+        const response = await DELETE(
+            new Request(`http://localhost/api/wishlist/${productId}`, {
+                method: "DELETE",
+            }),
+            createContext(productId),
+        );
+
+        expect(response.status).toBe(500);
 
         expect(wishlistService.removeFromWishlist).toHaveBeenCalledWith(
             userId,

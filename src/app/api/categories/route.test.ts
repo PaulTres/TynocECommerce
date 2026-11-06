@@ -1,3 +1,4 @@
+import { AppError } from "@/lib/errors";
 import { getCategories } from "@/services/product.service";
 import { NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -6,12 +7,6 @@ import { GET } from "./route";
 // Mock the product service to isolate the route handler.
 vi.mock("@/services/product.service", () => ({
     getCategories: vi.fn(),
-}));
-
-// Mock withErrors so we can test the route's actual response independently
-// of the shared error-handling implementation.
-vi.mock("@/lib/api/handler", () => ({
-    withErrors: (handler: () => Promise<NextResponse>) => handler,
 }));
 
 const getCategoriesMock = vi.mocked(getCategories);
@@ -79,10 +74,11 @@ describe("GET /api/categories", () => {
     });
 
     it("propagates errors from getCategories when using the actual handler", async () => {
-        const error = new Error("Database connection failed");
+        const error = new AppError("Database connection failed", 500, "kaboom");
 
         getCategoriesMock.mockRejectedValue(error);
 
-        await expect(GET()).rejects.toThrow("Database connection failed");
+        const response = await GET();
+        expect(response.status).toBe(500);
     });
 });

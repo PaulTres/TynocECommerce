@@ -1,5 +1,6 @@
 import { readJson } from "@/lib/api/handler";
 import { requireUserId } from "@/lib/api/session";
+import { UnauthorizedError, ValidationError } from "@/lib/errors";
 import * as wishlistService from "@/services/wishlist.service";
 import { NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -76,7 +77,7 @@ describe("Wishlist API routes", () => {
         });
 
         it("should propagate authentication errors", async () => {
-            mockedRequireUserId.mockRejectedValue(new Error("Unauthorized"));
+            mockedRequireUserId.mockRejectedValue(new UnauthorizedError());
 
             const response = await GET();
 
@@ -139,9 +140,9 @@ describe("Wishlist API routes", () => {
             });
         });
 
-        it("should return a validation error for an invalid productId", async () => {
+        it("should return a validation error for an empty productId", async () => {
             mockedRequireUserId.mockResolvedValue(userId);
-            mockedReadJson.mockResolvedValue({ productId: "invalid-id" });
+            mockedReadJson.mockResolvedValue({ productId: "" });
 
             const response = await POST(createRequest());
 
@@ -160,7 +161,7 @@ describe("Wishlist API routes", () => {
         });
 
         it("should propagate authentication errors", async () => {
-            mockedRequireUserId.mockRejectedValue(new Error("Unauthorized"));
+            mockedRequireUserId.mockRejectedValue(new UnauthorizedError());
 
             const response = await POST(createRequest());
 
@@ -171,7 +172,7 @@ describe("Wishlist API routes", () => {
 
         it("should handle JSON parsing errors", async () => {
             mockedRequireUserId.mockResolvedValue(userId);
-            mockedReadJson.mockRejectedValue(new Error("Invalid JSON"));
+            mockedReadJson.mockRejectedValue(new ValidationError());
 
             const response = await POST(createRequest());
 

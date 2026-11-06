@@ -21,12 +21,6 @@ export function errorResponse(err: unknown): NextResponse {
             { status: 400 },
         );
     }
-    if (err instanceof AppError) {
-        return NextResponse.json(
-            { error: { code: err.code, message: err.message } },
-            { status: err.status },
-        );
-    }
     if (err instanceof RateLimitedError) {
         return NextResponse.json(
             {
@@ -36,6 +30,12 @@ export function errorResponse(err: unknown): NextResponse {
                 },
             },
             { status: 429 },
+        );
+    }
+    if (err instanceof AppError) {
+        return NextResponse.json(
+            { error: { code: err.code, message: err.message } },
+            { status: err.status },
         );
     }
     console.error("[api] unexpected error", err);

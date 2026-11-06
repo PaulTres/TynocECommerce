@@ -1,3 +1,4 @@
+import { AppError } from "@/lib/errors";
 import { productIdSchema } from "@/lib/validation/schemas";
 import { getProductDetail } from "@/services/product.service";
 import { NextResponse } from "next/server";
@@ -8,16 +9,6 @@ import { GET } from "./route";
 vi.mock("@/services/product.service", () => ({
     getProductDetail: vi.fn(),
 }));
-
-// Mock withErrors to allow testing the route handler independently.
-vi.mock("@/lib/api/handler", async (importOriginal) => {
-    const actual = await importOriginal<typeof import("@/lib/api/handler")>();
-
-    return {
-        ...actual,
-        withErrors: (handler: (...args: any[]) => Promise<Response>) => handler,
-    };
-});
 
 describe("GET /api/products/:id", () => {
     const mockProductDetail = {
@@ -58,22 +49,26 @@ describe("GET /api/products/:id", () => {
     it("should reject an invalid product ID", async () => {
         const invalidId = "invalid/id!";
 
-        await expect(
-            GET(new Request(`http://localhost/api/products/${invalidId}`), {
+        const response = await GET(
+            new Request(`http://localhost/api/products/${invalidId}`),
+            {
                 params: Promise.resolve({ id: invalidId }),
-            }),
-        ).rejects.toThrow();
+            },
+        );
 
+        expect(response.status).toBe(400);
         expect(getProductDetail).not.toHaveBeenCalled();
     });
 
     it("should reject an empty product ID", async () => {
-        await expect(
-            GET(new Request("http://localhost/api/products/"), {
+        const response = await GET(
+            new Request("http://localhost/api/products/"),
+            {
                 params: Promise.resolve({ id: "" }),
-            }),
-        ).rejects.toThrow();
+            },
+        );
 
+        expect(response.status).toBe(400);
         expect(getProductDetail).not.toHaveBeenCalled();
     });
 
@@ -91,15 +86,21 @@ describe("GET /api/products/:id", () => {
     });
 
     it("should propagate service errors", async () => {
-        const serviceError = new Error("Database connection failed");
+        const serviceError = new AppError(
+            "Database connection failed",
+            500,
+            "kaboom",
+        );
 
         vi.mocked(getProductDetail).mockRejectedValue(serviceError);
 
-        await expect(
-            GET(new Request("http://localhost/api/products/product-123"), {
+        const response = await GET(
+            new Request("http://localhost/api/products/product-123"),
+            {
                 params: Promise.resolve({ id: "product-123" }),
-            }),
-        ).rejects.toThrow("Database connection failed");
+            },
+        );
+        expect(response.status).toBe(500);
 
         expect(getProductDetail).toHaveBeenCalledWith("product-123");
     });
