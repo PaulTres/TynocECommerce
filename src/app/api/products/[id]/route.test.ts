@@ -30,6 +30,7 @@ describe("GET /api/products/:id", () => {
     });
 
     it("should return product details with status 200", async () => {
+        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
         vi.mocked(getProductDetail).mockResolvedValue(mockProductDetail as any);
 
         const response = await GET(
@@ -73,6 +74,7 @@ describe("GET /api/products/:id", () => {
     });
 
     it("should pass the validated product ID to the service", async () => {
+        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
         vi.mocked(getProductDetail).mockResolvedValue(mockProductDetail as any);
 
         const validId = "valid-product-123";

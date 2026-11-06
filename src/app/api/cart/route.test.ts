@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/api/handler", () => ({
-    withErrors: <T extends (...args: any[]) => any>(fn: T) => fn,
+    withErrors: <T extends (...args: unknown[]) => unknown>(fn: T) => fn,
     readJson: mocks.readJson,
 }));
 
