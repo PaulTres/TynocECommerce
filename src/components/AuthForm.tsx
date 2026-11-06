@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormState } from "@/actions/auth";
+import { FormState } from "@/types";
 import Link from "next/link";
 import { useActionState } from "react";
 
