@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MAX_SLUG_KEY_LENGTH, REDIS_TIMEOUT_MS } from "../constants";
 
 const mocks = vi.hoisted(() => {
     const limit = vi.fn();
@@ -43,17 +44,6 @@ vi.mock("next/server", () => ({
 }));
 
 vi.mock("server-only", () => ({}));
-
-vi.mock("../constants", () => ({
-    REDIS_TIMEOUT_MS: 5000,
-    GLOBAL_LIMIT: 10,
-    GLOBAL_WINDOW: "1 m",
-    PER_FORM_LIMIT: 5,
-    PER_FORM_WINDOW: "1 m",
-    IDENTIFIER_LIMIT: 3,
-    IDENTIFIER_WINDOW: "5 m",
-    MAX_SLUG_KEY_LENGTH: 50,
-}));
 
 async function loadModule() {
     return import("./rate-limit");
@@ -409,7 +399,7 @@ describe("rate-limit", () => {
                 1,
                 expect.objectContaining({
                     prefix: "ecommerce:rl:submit:global",
-                    timeout: 5000,
+                    timeout: REDIS_TIMEOUT_MS,
                 }),
             );
 
@@ -417,7 +407,7 @@ describe("rate-limit", () => {
                 2,
                 expect.objectContaining({
                     prefix: "ecommerce:rl:submit:form",
-                    timeout: 5000,
+                    timeout: REDIS_TIMEOUT_MS,
                 }),
             );
 
@@ -425,7 +415,7 @@ describe("rate-limit", () => {
                 3,
                 expect.objectContaining({
                     prefix: "ecommerce:rl:submit:identifier",
-                    timeout: 5000,
+                    timeout: REDIS_TIMEOUT_MS,
                 }),
             );
         });
@@ -668,7 +658,7 @@ describe("rate-limit", () => {
         it("truncates slugs to MAX_SLUG_KEY_LENGTH", async () => {
             const { checkSubmitRateLimit } = await loadModule();
 
-            const slug = "a".repeat(100);
+            const slug = "a".repeat(MAX_SLUG_KEY_LENGTH * 2);
 
             await checkSubmitRateLimit(
                 {
@@ -683,7 +673,7 @@ describe("rate-limit", () => {
 
             expect(mocks.limit).toHaveBeenNthCalledWith(
                 2,
-                `${"a".repeat(50)}:${clientHash}`,
+                `${"a".repeat(MAX_SLUG_KEY_LENGTH)}:${clientHash}`,
             );
         });
 
@@ -754,12 +744,12 @@ describe("rate-limit", () => {
         it("truncates the slug to MAX_SLUG_KEY_LENGTH", async () => {
             const { checkIdentifierRateLimit } = await loadModule();
 
-            const slug = "a".repeat(100);
+            const slug = "a".repeat(MAX_SLUG_KEY_LENGTH * 2);
 
             await checkIdentifierRateLimit(slug, "user@example.com");
 
             expect(mocks.limit).toHaveBeenCalledWith(
-                `${"a".repeat(50)}:${hash("user@example.com")}`,
+                `${"a".repeat(MAX_SLUG_KEY_LENGTH)}:${hash("user@example.com")}`,
             );
         });
 

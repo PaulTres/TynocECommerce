@@ -116,3 +116,13 @@ export type ProductCursorRow = {
     priceCents: number;
     createdAt: string;
 };
+
+export type DataApiAccess = "anonymous" | "authenticated";
+
+export type DataApiRequestOptions = {
+    access: DataApiAccess;
+    method?: "GET" | "POST" | "PATCH" | "DELETE";
+    query?: URLSearchParams;
+    body?: unknown;
+    prefer?: string;
+};

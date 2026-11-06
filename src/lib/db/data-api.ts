@@ -1,18 +1,9 @@
-import { cache } from "react";
-import { UnauthorizedError } from "@/lib/errors";
-import { anonymousAuth } from "@/lib/auth/server";
 import { getRequestAuth } from "@/lib/auth/request";
+import { anonymousAuth } from "@/lib/auth/server";
+import { UnauthorizedError } from "@/lib/errors";
+import { DataApiRequestOptions } from "@/types";
+import { cache } from "react";
 import "server-only";
-
-export type DataApiAccess = "anonymous" | "authenticated";
-
-type DataApiRequestOptions = {
-    access: DataApiAccess;
-    method?: "GET" | "POST" | "PATCH" | "DELETE";
-    query?: URLSearchParams;
-    body?: unknown;
-    prefer?: string;
-};
 
 const getAccessToken = cache(async (): Promise<string> => {
     const requestAuth = await getRequestAuth();
@@ -36,7 +27,9 @@ function getResourceUrl(resource: string, query?: URLSearchParams): string {
 
     const url = new URL(configuredUrl);
     if (url.username || url.password)
-        throw new Error("NEON_DATA_API_URL must not contain database credentials");
+        throw new Error(
+            "NEON_DATA_API_URL must not contain database credentials",
+        );
     if (process.env.NODE_ENV === "production" && url.protocol !== "https:")
         throw new Error("NEON_DATA_API_URL must use HTTPS in production");
 
@@ -97,7 +90,12 @@ export async function dataApi<T>(
         } catch {
             // Keep the HTTP status text instead of returning an arbitrary body.
         }
-        throw new Error("Neon Data API request failed (" + response.status + "): " + message);
+        throw new Error(
+            "Neon Data API request failed (" +
+                response.status +
+                "): " +
+                message,
+        );
     }
 
     if (!responseText) return [] as T;

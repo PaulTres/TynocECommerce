@@ -27,8 +27,7 @@ export const GLOBAL_WINDOW = "1 h" as const;
 
 /**
  * Max attempts per identifier (email) within IDENTIFIER_WINDOW.
- * Keep this generous: an attacker can deliberately burn a victim's budget
- * (account lock-out DoS), so it should only stop sustained guessing.
+ * Should be kept generous so an attacker struggles to deliberately burn a victim's budget.
  */
 export const IDENTIFIER_LIMIT = 50;
 export const IDENTIFIER_WINDOW = "15 m" as const;
