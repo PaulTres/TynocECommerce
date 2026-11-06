@@ -26,7 +26,7 @@ export default async function ProductsPage({
             first(value),
         ]),
     );
-
+    //console.log(raw.category + ".....");
     const parsed = productQuerySchema.safeParse(raw);
     const q = parsed.success ? parsed.data : undefined;
     const validationErrors = parsed.success

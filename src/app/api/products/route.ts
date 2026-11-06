@@ -21,6 +21,7 @@ export const GET = withErrors(async (req: Request) => {
         sort: q.sort,
         limit: q.limit,
         nextCursor: q.nextCursor,
+        prevCursor: q.prevCursor,
     });
     return NextResponse.json(page, {
         headers: {

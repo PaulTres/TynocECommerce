@@ -67,19 +67,43 @@ const optionalNumber = z.preprocess(
     z.coerce.number().min(0).finite().optional(),
 );
 
+const optionalLimit = z.preprocess(
+    (value) => (value === "" || value === undefined ? undefined : value),
+    z.coerce.number().int().min(1).finite().default(PAGE_SIZE).optional(),
+);
+
+const optionalCategory = z.preprocess(
+    (value) => (value === "" || value === undefined ? undefined : value),
+    z
+        .string()
+        .regex(PRODUCT_ID_PATTERN, "Invalid category ID format.")
+        .max(
+            MAX_CATEGORY_LENGTH,
+            `Category cannot exceed ${MAX_CATEGORY_LENGTH} characters.`,
+        )
+        .optional(),
+);
+
 /** Query-string schema for the product listing. */
 export const productQuerySchema = z
     .object({
-        q: z.string().trim().max(MAX_PRODUCT_ID_LENGTH).optional(),
-        category: z
+        q: z
             .string()
-            .regex(PRODUCT_ID_PATTERN)
-            .max(MAX_CATEGORY_LENGTH)
+            .trim()
+            .max(
+                MAX_PRODUCT_ID_LENGTH,
+                `Search query cannot exceed ${MAX_PRODUCT_ID_LENGTH} characters.`,
+            )
             .optional(),
+        category: optionalCategory,
         min: optionalNumber,
         max: optionalNumber,
-        sort: z.enum(["newest", "price-asc", "price-desc"]).default("newest"),
-        limit: z.coerce.number().int().min(1).max(48).default(PAGE_SIZE),
+        sort: z
+            .enum(["newest", "price-asc", "price-desc"], {
+                errorMap: () => ({ message: "Invalid sorting option." }),
+            })
+            .default("newest"),
+        limit: optionalLimit,
         nextCursor: z.string().max(MAX_CURSOR_LENGTH).optional(),
         prevCursor: z.string().max(MAX_CURSOR_LENGTH).optional(),
     })

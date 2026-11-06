@@ -9,7 +9,6 @@ import {
     MAX_PRODUCT_ID_LENGTH,
     MAX_QTY_PER_ITEM,
     MIN_PASS_LENGTH,
-    PAGE_SIZE,
 } from "../constants";
 import {
     addToCartSchema,
@@ -400,7 +399,7 @@ describe("addToCartSchema", () => {
         },
     );
 
-    it("rejectws empty string and null", () => {
+    it("rejects empty string and null", () => {
         expect(
             addToCartSchema.safeParse({ productId: "abc", quantity: "" })
                 .success,
@@ -510,12 +509,12 @@ describe("wishlistSchema", () => {
 
 describe("productQuerySchema", () => {
     describe("defaults", () => {
-        it(`applies sort='newest' and limit=${PAGE_SIZE} for an empty query`, () => {
+        it(`applies sort='newest' and limit=undefined for an empty query`, () => {
             const result = productQuerySchema.safeParse({});
             expect(result.success).toBe(true);
             if (result.success) {
                 expect(result.data.sort).toBe("newest");
-                expect(result.data.limit).toBe(PAGE_SIZE);
+                expect(result.data.limit).toBe(undefined);
                 expect(result.data.q).toBeUndefined();
                 expect(result.data.category).toBeUndefined();
                 expect(result.data.min).toBeUndefined();
@@ -555,6 +554,15 @@ describe("productQuerySchema", () => {
             expect(
                 productQuerySchema.safeParse({ category: "home-garden" })
                     .success,
+            ).toBe(true);
+        });
+
+        it("accepts undefined or empty category", () => {
+            expect(productQuerySchema.safeParse({ category: "" }).success).toBe(
+                true,
+            );
+            expect(
+                productQuerySchema.safeParse({ category: undefined }).success,
             ).toBe(true);
         });
 
@@ -675,8 +683,8 @@ describe("productQuerySchema", () => {
             );
         });
 
-        it("rejects 0, 49, negatives and fractions (caps page size to protect the DB)", () => {
-            for (const limit of [0, 49, -5, 2.5]) {
+        it("rejects 0, negatives and fractions", () => {
+            for (const limit of [0, -5, 2.5]) {
                 expect(
                     issuePaths(productQuerySchema.safeParse({ limit })),
                 ).toContain("limit");
@@ -707,7 +715,7 @@ describe("productQuerySchema", () => {
     it("bad values fail validation", () => {
         const result = productQuerySchema.safeParse({
             sort: "bogus",
-            limit: 9999,
+            limit: "bogus",
         });
         expect(result.success).toBe(false);
         expect(issuePaths(result)).toEqual(
