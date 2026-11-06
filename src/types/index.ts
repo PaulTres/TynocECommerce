@@ -2,8 +2,7 @@
  * Domain types shared by every layer (UI, services, repositories).
  */
 
-import { productQuerySchema, registerSchema } from "@/lib/validation/schemas";
-import z from "zod";
+import { Ratelimit } from "@upstash/ratelimit";
 
 /** Public user data. The password hash is deliberately not part of this type. */
 export interface User {
@@ -137,3 +136,26 @@ export interface FormState {
 }
 
 export type SearchParams = Record<string, string | string[] | undefined>;
+
+//Rate limiting
+/** What the caller needs to know after a check. */
+export type RateLimitResult =
+    | { allowed: true }
+    | {
+          allowed: false;
+          retryAfterSeconds: number;
+          headers: Record<string, string>;
+      };
+
+/**
+ * Anything that carries headers. A `Request` satisfies this, and so does `{ headers: await headers() }` in a server action.
+ */
+export type HeadersCarrier = { headers: Headers };
+
+// The only thing we need from a limiter. Ratelimit and MultiRegionRatelimit both satisfy it.
+export type Limiter = Pick<Ratelimit, "limit">;
+export type Limiters = {
+    global: Limiter;
+    perForm: Limiter;
+    identifier: Limiter;
+};

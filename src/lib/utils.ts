@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { ValidationError } from "./errors";
 import { ParsedProductQuery } from "./validation/schemas";
 export { cn } from "cn";
@@ -129,4 +131,45 @@ export function getPaginationUrl(
     params.set(cursorName, cursor);
 
     return `/products?${params.toString()}`;
+}
+
+/**Builds a rate-limit JSON response. */
+export function rateLimitedResponse(rateLimit: {
+    allowed: false;
+    retryAfterSeconds: number;
+    headers: Record<string, string>;
+}) {
+    return NextResponse.json(
+        {
+            error: {
+                code: "RATE_LIMITED",
+                message: tooManyAttemptsMessage(rateLimit.retryAfterSeconds),
+            },
+        },
+        {
+            status: 429,
+            headers: rateLimit.headers,
+        },
+    );
+}
+
+/**
+ * Turns a retry delay into a short user-facing message.
+ * Rounds up to whole minutes once it exceeds a minute so the text stays readable
+ * ("Try again in 14 minutes" instead of "in 837 seconds").
+ */
+export function tooManyAttemptsMessage(retryAfterSeconds: number): string {
+    const wait =
+        retryAfterSeconds < 60
+            ? `${retryAfterSeconds} seconds`
+            : `${Math.ceil(retryAfterSeconds / 60)} minutes`;
+    return `Too many attempts. Please try again in ${wait}.`;
+}
+
+/**
+ * Hashes a value before it is used as a Redis key, so raw IPs / emails (personal data) never sit in Redis.
+ */
+export function hashKey(value: string): string {
+    const hasher = createHash("sha256");
+    return hasher.update(value).digest("hex").slice(0, 32);
 }

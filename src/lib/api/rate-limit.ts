@@ -1,3 +1,4 @@
+import { HeadersCarrier, Limiter, Limiters, RateLimitResult } from "@/types";
 import {
     MultiRegionRatelimit,
     Ratelimit,
@@ -5,34 +6,25 @@ import {
 } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { after } from "next/server";
-import { createHash } from "node:crypto";
-import { isIP } from "node:net";
 import "server-only"; // build fails if this file is ever imported into browser code
-import { REDIS_TIMEOUT_MS, GLOBAL_LIMIT, GLOBAL_WINDOW, PER_FORM_LIMIT, PER_FORM_WINDOW, IDENTIFIER_LIMIT, IDENTIFIER_WINDOW, MAX_SLUG_KEY_LENGTH } from "../constants";
+import {
+    GLOBAL_LIMIT,
+    GLOBAL_WINDOW,
+    IDENTIFIER_LIMIT,
+    IDENTIFIER_WINDOW,
+    MAX_SLUG_KEY_LENGTH,
+    PER_FORM_LIMIT,
+    PER_FORM_WINDOW,
+    REDIS_TIMEOUT_MS,
+} from "../constants";
+import { getClientIp } from "../server-utils";
+import { hashKey } from "../utils";
 
 // This module implements Redis-backed rate limiting (Upstash, sliding window).
 // Three independent buckets protect login/register:
 //global - per client IP, across all forms (slows down scanners)
 //perForm - per client IP, per form (slows down brute force from one source)
 //identifier - per submitted identifier (e.g. email), regardless of IP(slows down distributed attacks against one account)
-
-/** What the caller needs to know after a check. */
-export type RateLimitResult =
-    | { allowed: true }
-    | {
-          allowed: false;
-          retryAfterSeconds: number;
-          headers: Record<string, string>;
-      };
-
-/**
- * Anything that carries headers. A `Request` satisfies this, and so does `{ headers: await headers() }` in a server action.
- */
-export type HeadersCarrier = { headers: Headers };
-
-// The only thing we need from a limiter. Ratelimit and MultiRegionRatelimit both satisfy it.
-type Limiter = Pick<Ratelimit, "limit">;
-type Limiters = { global: Limiter; perForm: Limiter; identifier: Limiter };
 
 // Cached across requests within one server instance (module scope).
 // undefined = not built yet, null = built but Redis is not configured.
@@ -135,61 +127,6 @@ function getLimiters(): Limiters | null {
 }
 
 /**
- * Collapses an IPv6 address to its /64 prefix.
- * One home/ISP connection usually owns a whole /64 (2^64 addresses), so
- * keying on the full address would let an attacker rotate IPs and dodge the
- * limit. IPv4 and unparseable values are returned unchanged.
- */
-function normalizeIp(ip: string): string {
-    const addr = String(ip.split("%")[0]); // drop any IPv6 zone id like "%eth0"
-    if (isIP(addr) !== 6) return addr;
-
-    // IPv4-mapped IPv6 (::ffff:1.2.3.4) is really an IPv4 client.
-    const mapped = addr.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i);
-    if (mapped) return String(mapped[1]);
-
-    // Expand "::" into the right number of zero groups, then keep the first 4 groups.
-    const [head, tail] = addr.split("::");
-    const headGroups = head ? head.split(":") : [];
-    const tailGroups = tail ? tail.split(":") : [];
-    const zeros =
-        tail === undefined
-            ? 0
-            : Math.max(0, 8 - headGroups.length - tailGroups.length);
-    const groups = [
-        ...headGroups,
-        ...Array<string>(zeros).fill("0"),
-        ...tailGroups,
-    ];
-    const prefix = groups
-        .slice(0, 4)
-        .map((g) => (parseInt(g, 16) || 0).toString(16));
-    return `${prefix.join(":")}::/64`;
-}
-
-/**
- * Extracts the client IP from proxy headers.
- * Returns "unknown" if no valid IP is found (all such clients share one bucket).
- */
-export function getClientIp(headers: Headers): string {
-    const candidate =
-        headers.get("x-real-ip")?.trim() ||
-        headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-        "";
-    return isIP(String(candidate.split("%")[0]))
-        ? normalizeIp(candidate)
-        : "unknown";
-}
-
-/**
- * Hashes a value before it is used as a Redis key, so raw IPs / emails (personal data) never sit in Redis.
- */
-function hashKey(value: string): string {
-    const hasher = createHash("sha256");
-    return hasher.update(value).digest("hex").slice(0, 32);
-}
-
-/**
  * Consumes one token from a limiter and converts the answer to a RateLimitResult.
  * Also registers the limiter's `pending` background sync (multi-region) so it
  * finishes even if the serverless function is frozen after the response.
@@ -201,19 +138,6 @@ async function consume(
     const res = await limiter.limit(key);
     keepAlive(res.pending);
     return res.success ? { allowed: true } : deny(res);
-}
-
-/**
- * Turns a retry delay into a short user-facing message.
- * Rounds up to whole minutes once it exceeds a minute so the text stays readable
- * ("Try again in 14 minutes" instead of "in 837 seconds").
- */
-export function tooManyAttemptsMessage(retryAfterSeconds: number): string {
-    const wait =
-        retryAfterSeconds < 60
-            ? `${retryAfterSeconds} seconds`
-            : `${Math.ceil(retryAfterSeconds / 60)} minutes`;
-    return `Too many attempts. Please try again in ${wait}.`;
 }
 
 /**

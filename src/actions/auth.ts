@@ -3,11 +3,10 @@
 import {
     checkIdentifierRateLimit,
     checkSubmitRateLimit,
-    tooManyAttemptsMessage,
 } from "@/lib/api/rate-limit";
 import { auth } from "@/lib/auth/server";
 import { AppError } from "@/lib/errors";
-import { safeRedirectPath } from "@/lib/utils";
+import { safeRedirectPath, tooManyAttemptsMessage } from "@/lib/utils";
 import { loginSchema, registerSchema } from "@/lib/validation/schemas";
 import { registerUser, verifyCredentials } from "@/services/auth.service";
 import { FormState } from "@/types";

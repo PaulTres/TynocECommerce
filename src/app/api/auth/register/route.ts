@@ -1,9 +1,9 @@
 import { readJson, withErrors } from "@/lib/api/handler";
 import {
     checkIdentifierRateLimit,
-    checkSubmitRateLimit,
-    tooManyAttemptsMessage,
+    checkSubmitRateLimit
 } from "@/lib/api/rate-limit";
+import { rateLimitedResponse } from "@/lib/utils";
 import { registerSchema } from "@/lib/validation/schemas";
 import { registerUser } from "@/services/auth.service";
 import { NextResponse } from "next/server";
@@ -17,41 +17,13 @@ export const POST = withErrors(async (req: Request) => {
         { headers: req.headers },
         "register",
     );
-    if (!ipLimit.allowed) {
-        return NextResponse.json(
-            {
-                error: {
-                    code: "RATE_LIMITED",
-                    message: tooManyAttemptsMessage(ipLimit.retryAfterSeconds),
-                },
-            },
-            {
-                status: 429,
-                headers: ipLimit.headers,
-            },
-        );
-    }
+    if (!ipLimit.allowed) return rateLimitedResponse(ipLimit);
     const input = registerSchema.parse(await readJson(req));
     const identifierLimit = await checkIdentifierRateLimit(
         "register",
         input.email,
     );
-    if (!identifierLimit.allowed) {
-        return NextResponse.json(
-            {
-                error: {
-                    code: "RATE_LIMITED",
-                    message: tooManyAttemptsMessage(
-                        identifierLimit.retryAfterSeconds,
-                    ),
-                },
-            },
-            {
-                status: 429,
-                headers: identifierLimit.headers,
-            },
-        );
-    }
+    if (!identifierLimit.allowed) return rateLimitedResponse(identifierLimit);
     const user = await registerUser(input);
     return NextResponse.json({ user }, { status: 201 });
 });

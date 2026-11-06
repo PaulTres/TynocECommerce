@@ -46,6 +46,7 @@ vi.mock("@/lib/auth/server", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
+    tooManyAttemptsMessage: tooManyAttemptsMessageMock,
     safeRedirectPath: safeRedirectPathMock,
 }));
 

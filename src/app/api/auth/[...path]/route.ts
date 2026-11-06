@@ -1,24 +1,11 @@
-import { auth } from "@/lib/auth/server";
 import {
     checkIdentifierRateLimit,
     checkSubmitRateLimit,
-    tooManyAttemptsMessage,
 } from "@/lib/api/rate-limit";
-import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth/server";
+import { rateLimitedResponse } from "@/lib/utils";
 
 const handlers = auth.handler();
-
-function rateLimitedResponse(retryAfterSeconds: number, headers: Record<string, string>) {
-    return NextResponse.json(
-        {
-            error: {
-                code: "RATE_LIMITED",
-                message: tooManyAttemptsMessage(retryAfterSeconds),
-            },
-        },
-        { status: 429, headers },
-    );
-}
 
 /**
  * The Neon Auth proxy is public by design. Keep the app's IP and identifier
@@ -34,19 +21,21 @@ async function guardEmailAuth(request: Request): Promise<Response | null> {
           : null;
     if (!operation) return null;
 
-    const ipLimit = await checkSubmitRateLimit({ headers: request.headers }, operation);
-    if (!ipLimit.allowed)
-        return rateLimitedResponse(ipLimit.retryAfterSeconds, ipLimit.headers);
+    const ipLimit = await checkSubmitRateLimit(
+        { headers: request.headers },
+        operation,
+    );
+    if (!ipLimit.allowed) return rateLimitedResponse(ipLimit);
 
     try {
         const body = (await request.clone().json()) as { email?: unknown };
         if (typeof body.email === "string" && body.email.trim()) {
-            const identifierLimit = await checkIdentifierRateLimit(operation, body.email);
+            const identifierLimit = await checkIdentifierRateLimit(
+                operation,
+                body.email,
+            );
             if (!identifierLimit.allowed)
-                return rateLimitedResponse(
-                    identifierLimit.retryAfterSeconds,
-                    identifierLimit.headers,
-                );
+                return rateLimitedResponse(identifierLimit);
         }
     } catch {
         // Neon Auth returns the normal validation error for malformed JSON.

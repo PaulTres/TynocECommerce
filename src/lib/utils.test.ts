@@ -21,6 +21,7 @@ import {
     isValidPriceRange,
     safeRedirectPath,
     slugify,
+    tooManyAttemptsMessage,
     toStringArray,
 } from "./utils";
 
@@ -642,6 +643,42 @@ describe("getPaginationUrl", () => {
 
         expect(result).toBe(
             "/products?sort=newest&limit=24&nextCursor=cursor123",
+        );
+    });
+});
+
+describe("tooManyAttemptsMessage", () => {
+    it("formats retry delays shorter than one minute in seconds", async () => {
+        expect(tooManyAttemptsMessage(30)).toBe(
+            "Too many attempts. Please try again in 30 seconds.",
+        );
+    });
+
+    it("formats exactly 59 seconds in seconds", async () => {
+        expect(tooManyAttemptsMessage(59)).toBe(
+            "Too many attempts. Please try again in 59 seconds.",
+        );
+    });
+
+    it("formats exactly 60 seconds in minutes", async () => {
+        expect(tooManyAttemptsMessage(60)).toBe(
+            "Too many attempts. Please try again in 1 minutes.",
+        );
+    });
+
+    it("rounds up partial minutes", async () => {
+        expect(tooManyAttemptsMessage(61)).toBe(
+            "Too many attempts. Please try again in 2 minutes.",
+        );
+
+        expect(tooManyAttemptsMessage(837)).toBe(
+            "Too many attempts. Please try again in 14 minutes.",
+        );
+    });
+
+    it("handles zero seconds", async () => {
+        expect(tooManyAttemptsMessage(0)).toBe(
+            "Too many attempts. Please try again in 0 seconds.",
         );
     });
 });
