@@ -42,7 +42,7 @@ export function safeRedirectPath(
         !target ||
         !target.startsWith("/") ||
         target.startsWith("//") ||
-        target.includes("\\")
+        /[\u0000-\u001F\u007F\\]/.test(target)
     ) {
         return fallback;
     }

@@ -630,7 +630,9 @@ describe("productQuerySchema", () => {
             const result = productQuerySchema.safeParse({ min: 100, max: 10 });
             expect(result.success).toBe(false);
             expect(issuePaths(result)).toContain("min");
-            expect(issueMessages(result)).toContain("min must be <= max");
+            expect(issueMessages(result)).toContain(
+                "Minimum price cannot be greater than maximum price.",
+            );
         });
 
         it("skips the range check when only one bound is provided", () => {
