@@ -1,4 +1,4 @@
-import { HeaderErrorBoundary } from "@/components/ErrorBoundary";
+import { HeaderErrorBoundary } from "@/components/HeaderErrorBoundary";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { SITE_NAME } from "@/lib/constants";

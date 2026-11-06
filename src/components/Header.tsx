@@ -24,7 +24,7 @@ async function CartLink({ userId }: { userId: string | null }) {
     );
 }
 
-async function WishlishLink({ userId }: { userId: string | null }) {
+async function WishlistLink({ userId }: { userId: string | null }) {
     const count = userId ? await getWishlistCount(userId).catch(() => 0) : 0; // badge failure must not break the page
     return (
         <Link
@@ -80,9 +80,11 @@ export async function Header() {
                         Shop
                     </Link>
                     <Suspense
-                        fallback={<span className="px-2 text-sm">Cart</span>}
+                        fallback={
+                            <span className="px-2 text-sm">Wishlist</span>
+                        }
                     >
-                        <WishlishLink userId={userId} />
+                        <WishlistLink userId={userId} />
                     </Suspense>
                     <Suspense
                         fallback={<span className="px-2 text-sm">Cart</span>}
