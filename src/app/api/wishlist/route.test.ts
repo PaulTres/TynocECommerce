@@ -1,6 +1,6 @@
 import { readJson } from "@/lib/api/handler";
 import { requireUserId } from "@/lib/api/session";
-import { UnauthorizedError, ValidationError } from "@/lib/errors";
+import { AppError, UnauthorizedError, ValidationError } from "@/lib/errors";
 import * as wishlistService from "@/services/wishlist.service";
 import { NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -87,7 +87,9 @@ describe("Wishlist API routes", () => {
 
         it("should handle wishlist service errors", async () => {
             mockedRequireUserId.mockResolvedValue("user-123");
-            mockedGetWishlist.mockRejectedValue(new Error("Database error"));
+            mockedGetWishlist.mockRejectedValue(
+                new AppError("Database error", 500, "error"),
+            );
 
             const response = await GET();
 
@@ -183,7 +185,9 @@ describe("Wishlist API routes", () => {
         it("should handle wishlist service errors", async () => {
             mockedRequireUserId.mockResolvedValue(userId);
             mockedReadJson.mockResolvedValue({ productId });
-            mockedAddToWishlist.mockRejectedValue(new Error("Database error"));
+            mockedAddToWishlist.mockRejectedValue(
+                new AppError("Database error", 500, "boom"),
+            );
 
             const response = await POST(createRequest());
 
