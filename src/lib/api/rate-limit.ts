@@ -8,34 +8,13 @@ import { after } from "next/server";
 import { createHash } from "node:crypto";
 import { isIP } from "node:net";
 import "server-only"; // build fails if this file is ever imported into browser code
+import { REDIS_TIMEOUT_MS, GLOBAL_LIMIT, GLOBAL_WINDOW, PER_FORM_LIMIT, PER_FORM_WINDOW, IDENTIFIER_LIMIT, IDENTIFIER_WINDOW, MAX_SLUG_KEY_LENGTH } from "../constants";
 
 // This module implements Redis-backed rate limiting (Upstash, sliding window).
 // Three independent buckets protect login/register:
 //global - per client IP, across all forms (slows down scanners)
 //perForm - per client IP, per form (slows down brute force from one source)
 //identifier - per submitted identifier (e.g. email), regardless of IP(slows down distributed attacks against one account)
-
-/** Max submissions per client IP per form within PER_FORM_WINDOW (login + register). */
-export const PER_FORM_LIMIT = 5;
-export const PER_FORM_WINDOW = "1 m" as const;
-
-/** Max submissions per client IP across all forms within GLOBAL_WINDOW. */
-export const GLOBAL_LIMIT = 30;
-export const GLOBAL_WINDOW = "1 h" as const;
-
-/**
- * Max attempts per identifier (email) within IDENTIFIER_WINDOW.
- * Keep this generous: an attacker can deliberately burn a victim's budget
- * (account lock-out DoS), so it should only stop sustained guessing.
- */
-export const IDENTIFIER_LIMIT = 50;
-export const IDENTIFIER_WINDOW = "15 m" as const;
-
-/** Allow the request if Redis does not answer within this many ms (fail-open). */
-export const REDIS_TIMEOUT_MS = 1500;
-
-/** Caps the form name used inside Redis keys so keys can never grow unbounded. */
-export const MAX_SLUG_KEY_LENGTH = 64;
 
 /** What the caller needs to know after a check. */
 export type RateLimitResult =
