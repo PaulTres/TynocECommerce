@@ -126,3 +126,9 @@ export type DataApiRequestOptions = {
     body?: unknown;
     prefer?: string;
 };
+
+export interface FormState {
+    error?: string;
+    success?: string;
+    fieldErrors?: Record<string, string[] | undefined>;
+}
