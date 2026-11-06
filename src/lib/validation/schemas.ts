@@ -67,7 +67,7 @@ const optionalNumber = z.preprocess(
     z.coerce.number().min(0).finite().optional(),
 );
 
-/** Query-string schema for the product listing; bad values throw. */
+/** Query-string schema for the product listing. */
 export const productQuerySchema = z
     .object({
         q: z.string().trim().max(MAX_PRODUCT_ID_LENGTH).optional(),
@@ -86,9 +86,11 @@ export const productQuerySchema = z
     .refine(
         (v) => v.min === undefined || v.max === undefined || v.min <= v.max,
         {
-            message: "min must be <= max",
+            message: "Minimum price cannot be greater than maximum price.",
             path: ["min"],
         },
     );
 
 export type RegisterInput = z.infer<typeof registerSchema>;
+
+export type ParsedProductQuery = z.infer<typeof productQuerySchema>;

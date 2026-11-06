@@ -2,6 +2,9 @@
  * Domain types shared by every layer (UI, services, repositories).
  */
 
+import { productQuerySchema, registerSchema } from "@/lib/validation/schemas";
+import z from "zod";
+
 /** Public user data. The password hash is deliberately not part of this type. */
 export interface User {
     id: string;
@@ -132,3 +135,5 @@ export interface FormState {
     success?: string;
     fieldErrors?: Record<string, string[] | undefined>;
 }
+
+export type SearchParams = Record<string, string | string[] | undefined>;

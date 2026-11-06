@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as categoriesRepo from "@/lib/db/categories.repo";
 import * as productsRepo from "@/lib/db/products.repo";
-import { ConflictError, NotFoundError } from "@/lib/errors";
+import { ValidationError, NotFoundError } from "@/lib/errors";
 import type { Category, Page, Product } from "@/types";
 
 import {
@@ -142,10 +142,10 @@ describe("getFeaturedProducts", () => {
     });
 
     it.each(INVALID_LIMITS)(
-        "rejects an invalid limit (%s) with ConflictError and never hits the DB",
+        "rejects an invalid limit (%s) with ValidationError and never hits the DB",
         async (_label, limit) => {
             await expect(getFeaturedProducts(limit)).rejects.toBeInstanceOf(
-                ConflictError,
+                ValidationError,
             );
             expect(queryProducts).not.toHaveBeenCalled();
         },
@@ -162,7 +162,7 @@ describe("getFeaturedProducts", () => {
         expect(() => {
             result = getFeaturedProducts(-1);
         }).not.toThrow();
-        await expect(result).rejects.toBeInstanceOf(ConflictError);
+        await expect(result).rejects.toBeInstanceOf(ValidationError);
     });
 
     it("propagates repository failures", async () => {
@@ -188,10 +188,10 @@ describe("getNewArrivals", () => {
     });
 
     it.each(INVALID_LIMITS)(
-        "rejects an invalid limit (%s) with ConflictError and never hits the DB",
+        "rejects an invalid limit (%s) with ValidationError and never hits the DB",
         async (_label, limit) => {
             await expect(getNewArrivals(limit)).rejects.toBeInstanceOf(
-                ConflictError,
+                ValidationError,
             );
             expect(queryProducts).not.toHaveBeenCalled();
         },

@@ -5,16 +5,21 @@ interface Props {
     values: {
         q?: string;
         category?: string;
-        min?: number;
-        max?: number;
+        min?: number | string;
+        max?: number | string;
         sort?: string;
     };
+    validationErrors?: string[];
 }
 
 /**
  * Search/filter panel as a plain GET <form>.
  */
-export function ProductFilters({ categories, values }: Props) {
+export function ProductFilters({
+    categories,
+    values,
+    validationErrors = [],
+}: Props) {
     return (
         <form
             action="/products"
@@ -79,8 +84,19 @@ export function ProductFilters({ categories, values }: Props) {
                     <option value="price-desc">Price: high to low</option>
                 </select>
             </label>
+            {validationErrors.length > 0 && (
+                <div
+                    className="text-sm text-destructive sm:col-span-2 lg:col-span-5"
+                    role="alert"
+                >
+                    {validationErrors.map((error) => (
+                        <p key={error}>{error}</p>
+                    ))}
+                </div>
+            )}
             <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-5">
                 <button className="btn-primary">Apply filters</button>
+                {/*Calls the site with no parameters to get a clear page. */}
                 {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
                 <a href="/products" className="btn-secondary">
                     Clear

@@ -10,15 +10,21 @@ import {
 import { ValidationError } from "./errors";
 import {
     asIso,
+    assertValidPriceRange,
     decodeCursor,
     encodeCursor,
+    first,
     formatPrice,
+    getPaginationUrl,
     isInteger,
     isNaturalNumber,
+    isValidPriceRange,
     safeRedirectPath,
     slugify,
     toStringArray,
 } from "./utils";
+
+import { ParsedProductQuery } from "./validation/schemas";
 
 let consoleErrorSpy: MockInstance<typeof console.error>;
 
@@ -237,6 +243,14 @@ describe("isNaturalNumber", () => {
         expect(isNaturalNumber(0)).toBe(true);
     });
 
+    it("returns true for zero when allowZero is true", () => {
+        expect(isNaturalNumber(0, true)).toBe(true);
+    });
+
+    it("returns false for zero when allowZero is false", () => {
+        expect(isNaturalNumber(0, false)).toBe(false);
+    });
+
     it("returns true for positive integers", () => {
         expect(isNaturalNumber(1)).toBe(true);
         expect(isNaturalNumber(100)).toBe(true);
@@ -410,5 +424,224 @@ describe("toStringArray", () => {
             "1,2",
             "[object Object]",
         ]);
+    });
+});
+
+describe("isValidPriceRange", () => {
+    it("returns true when both prices are undefined", () => {
+        expect(isValidPriceRange()).toBe(true);
+    });
+
+    it("returns true when minimum price is undefined", () => {
+        expect(isValidPriceRange(undefined, 1000)).toBe(true);
+    });
+
+    it("returns true when maximum price is undefined", () => {
+        expect(isValidPriceRange(1000, undefined)).toBe(true);
+    });
+
+    it("returns true when minimum price is less than maximum price", () => {
+        expect(isValidPriceRange(1000, 2000)).toBe(true);
+    });
+
+    it("returns true when minimum price equals maximum price", () => {
+        expect(isValidPriceRange(1000, 1000)).toBe(true);
+    });
+
+    it("returns false when minimum price exceeds maximum price", () => {
+        expect(isValidPriceRange(2000, 1000)).toBe(false);
+    });
+
+    it("handles zero as a valid price", () => {
+        expect(isValidPriceRange(0, 1000)).toBe(true);
+        expect(isValidPriceRange(0, 0)).toBe(true);
+    });
+});
+
+describe("assertValidPriceRange", () => {
+    it("does not throw when both prices are undefined", () => {
+        expect(() => assertValidPriceRange()).not.toThrow();
+    });
+
+    it("does not throw when minimum price is undefined", () => {
+        expect(() => assertValidPriceRange(undefined, 1000)).not.toThrow();
+    });
+
+    it("does not throw when maximum price is undefined", () => {
+        expect(() => assertValidPriceRange(1000, undefined)).not.toThrow();
+    });
+
+    it("does not throw when minimum price is less than maximum price", () => {
+        expect(() => assertValidPriceRange(1000, 2000)).not.toThrow();
+    });
+
+    it("does not throw when minimum price equals maximum price", () => {
+        expect(() => assertValidPriceRange(1000, 1000)).not.toThrow();
+    });
+
+    it("throws ValidationError when minimum price exceeds maximum price", () => {
+        expect(() => assertValidPriceRange(2000, 1000)).toThrow(
+            ValidationError,
+        );
+    });
+
+    it("throws with the expected error message", () => {
+        expect(() => assertValidPriceRange(2000, 1000)).toThrow(
+            "Minimum price cannot be greater than maximum price",
+        );
+    });
+});
+
+describe("first", () => {
+    it("returns the string when given a single string", () => {
+        expect(first("hello")).toBe("hello");
+    });
+
+    it("returns the first value when given an array", () => {
+        expect(first(["hello", "world"])).toBe("hello");
+    });
+
+    it("returns the first value when given an array with multiple values", () => {
+        expect(first(["first", "second", "third"])).toBe("first");
+    });
+
+    it("returns undefined when given an empty array", () => {
+        expect(first([])).toBeUndefined();
+    });
+
+    it("returns undefined when given undefined", () => {
+        expect(first(undefined)).toBeUndefined();
+    });
+});
+
+describe("getPaginationUrl", () => {
+    const baseQuery: ParsedProductQuery = {
+        q: "laptop",
+        category: "electronics",
+        min: 1000,
+        max: 5000,
+        sort: "price-asc",
+        limit: 24,
+    };
+
+    it("returns undefined when cursor is undefined", () => {
+        expect(getPaginationUrl(baseQuery, "nextCursor")).toBeUndefined();
+    });
+
+    it("returns undefined when cursor is an empty string", () => {
+        expect(getPaginationUrl(baseQuery, "nextCursor", "")).toBeUndefined();
+    });
+
+    it("generates a URL with a next cursor", () => {
+        const result = getPaginationUrl(baseQuery, "nextCursor", "cursor123");
+
+        expect(result).toContain("/products?");
+        expect(result).toContain("nextCursor=cursor123");
+    });
+
+    it("generates a URL with a previous cursor", () => {
+        const result = getPaginationUrl(baseQuery, "prevCursor", "cursor456");
+
+        expect(result).toContain("/products?");
+        expect(result).toContain("prevCursor=cursor456");
+    });
+
+    it("preserves all existing query parameters", () => {
+        const result = getPaginationUrl(baseQuery, "nextCursor", "cursor123");
+
+        const params = new URLSearchParams(result?.split("?")[1]);
+
+        expect(params.get("q")).toBe("laptop");
+        expect(params.get("category")).toBe("electronics");
+        expect(params.get("min")).toBe("1000");
+        expect(params.get("max")).toBe("5000");
+        expect(params.get("sort")).toBe("price-asc");
+        expect(params.get("limit")).toBe("24");
+        expect(params.get("nextCursor")).toBe("cursor123");
+    });
+
+    it("excludes existing pagination cursors", () => {
+        const query: ParsedProductQuery = {
+            ...baseQuery,
+            nextCursor: "old-next",
+            prevCursor: "old-prev",
+        };
+
+        const result = getPaginationUrl(query, "nextCursor", "new-next");
+
+        const params = new URLSearchParams(result?.split("?")[1]);
+
+        expect(params.get("nextCursor")).toBe("new-next");
+        expect(params.has("prevCursor")).toBe(false);
+    });
+
+    it("excludes undefined values", () => {
+        const query: ParsedProductQuery = {
+            ...baseQuery,
+            q: undefined,
+            category: undefined,
+            min: undefined,
+            max: undefined,
+        };
+
+        const result = getPaginationUrl(query, "nextCursor", "cursor123");
+
+        const params = new URLSearchParams(result?.split("?")[1]);
+
+        expect(params.has("q")).toBe(false);
+        expect(params.has("category")).toBe(false);
+        expect(params.has("min")).toBe(false);
+        expect(params.has("max")).toBe(false);
+    });
+
+    it("converts numeric values to strings", () => {
+        const result = getPaginationUrl(baseQuery, "nextCursor", "cursor123");
+
+        const params = new URLSearchParams(result?.split("?")[1]);
+
+        expect(params.get("min")).toBe("1000");
+        expect(params.get("max")).toBe("5000");
+        expect(params.get("limit")).toBe("24");
+    });
+
+    it("URL-encodes special characters in query values", () => {
+        const query: ParsedProductQuery = {
+            ...baseQuery,
+            q: "gaming laptop & accessories",
+        };
+
+        const result = getPaginationUrl(query, "nextCursor", "cursor 123");
+
+        expect(result).toContain("q=gaming+laptop+%26+accessories");
+        expect(result).toContain("nextCursor=cursor+123");
+    });
+
+    it("changes only the pagination cursor between requests", () => {
+        const nextUrl = getPaginationUrl(baseQuery, "nextCursor", "next123");
+
+        const prevUrl = getPaginationUrl(baseQuery, "prevCursor", "prev456");
+
+        const nextParams = new URLSearchParams(nextUrl?.split("?")[1]);
+        const prevParams = new URLSearchParams(prevUrl?.split("?")[1]);
+
+        for (const key of ["q", "category", "min", "max", "sort", "limit"]) {
+            expect(nextParams.get(key)).toBe(prevParams.get(key));
+        }
+
+        expect(nextParams.get("nextCursor")).toBe("next123");
+        expect(prevParams.get("prevCursor")).toBe("prev456");
+    });
+
+    it("handles a query containing only required/defaulted parameters", () => {
+        const query: ParsedProductQuery = {
+            sort: "newest",
+            limit: 24,
+        };
+
+        const result = getPaginationUrl(query, "nextCursor", "cursor123");
+
+        expect(result).toBe(
+            "/products?sort=newest&limit=24&nextCursor=cursor123",
+        );
     });
 });

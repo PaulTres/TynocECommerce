@@ -1,53 +1,15 @@
-
-import Link from "next/link";
-import type { Metadata } from "next";
 import { ProductFilters } from "@/components/ProductFilters";
 import { ProductGrid } from "@/components/ProductGrid";
 import { getUserId } from "@/lib/api/session";
-import { PAGE_SIZE } from "@/lib/constants";
+import { first, getPaginationUrl } from "@/lib/utils";
 import { productQuerySchema } from "@/lib/validation/schemas";
 import { getCategories, searchProducts } from "@/services/product.service";
 import { getWishlistIds } from "@/services/wishlist.service";
+import { SearchParams } from "@/types";
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Shop" };
-
-type SearchParams = Record<string, string | string[] | undefined>;
-
-/** Next gives repeated params as arrays; we only support the first value of each. */
-const first = (v: string | string[] | undefined) =>
-    Array.isArray(v) ? v[0] : v;
-
-/**
- * Creates a pagination URL while preserving the current filters and sorting.
- * Only the pagination cursor changes between navigation requests.
- */
-function getPaginationUrl(
-    raw: SearchParams,
-    cursorName: "nextCursor" | "prevCursor",
-    cursor?: string,
-): string | undefined {
-    if (!cursor) return undefined;
-
-    const params = new URLSearchParams();
-
-    for (const [key, value] of Object.entries(raw)) {
-        const normalized = first(value);
-
-        // Exclude existing pagination cursors and empty values.
-        if (
-            key !== "nextCursor" &&
-            key !== "prevCursor" &&
-            normalized !== undefined &&
-            normalized !== ""
-        ) {
-            params.set(key, normalized);
-        }
-    }
-
-    params.set(cursorName, cursor);
-
-    return `/products?${params.toString()}`;
-}
 
 /**
  * Product listing with search, category/price filters, sorting
@@ -58,7 +20,7 @@ export default async function ProductsPage({
 }: {
     searchParams: Promise<SearchParams>;
 }) {
-    const raw = Object.fromEntries(
+    const raw: Record<string, string | undefined> = Object.fromEntries(
         Object.entries(await searchParams).map(([key, value]) => [
             key,
             first(value),
@@ -66,36 +28,62 @@ export default async function ProductsPage({
     );
 
     const parsed = productQuerySchema.safeParse(raw);
-    const q = parsed.success
-        ? parsed.data
-        : { sort: "newest" as const, limit: PAGE_SIZE };
+    const q = parsed.success ? parsed.data : undefined;
+    const validationErrors = parsed.success
+        ? []
+        : [...new Set(parsed.error.issues.map((issue) => issue.message))];
 
     const userId = await getUserId();
 
+    // Invalid filters are shown in the form and never sent to the product query.
+    const pagePromise = q
+        ? searchProducts({
+              search: q.q || undefined,
+              categorySlug: q.category,
+              minPriceCents:
+                  q.min !== undefined ? Math.round(q.min * 100) : undefined,
+              maxPriceCents:
+                  q.max !== undefined ? Math.round(q.max * 100) : undefined,
+              sort: q.sort,
+              limit: q.limit,
+              nextCursor: q.nextCursor,
+              prevCursor: q.prevCursor,
+          })
+        : Promise.resolve(undefined);
+
+    const filterValues = q
+        ? {
+              q: q.q,
+              category: q.category,
+              min: q.min,
+              max: q.max,
+              sort: q.sort,
+          }
+        : {
+              q: raw.q,
+              category: raw.category,
+              min: raw.min,
+              max: raw.max,
+              sort: raw.sort ?? "newest",
+          };
+
     const [page, categories, wishlistIds] = await Promise.all([
-        searchProducts({
-            search: q.q || undefined,
-            categorySlug: "category" in q ? q.category : undefined,
-            minPriceCents:
-                "min" in q && q.min !== undefined
-                    ? Math.round(q.min * 100)
-                    : undefined,
-            maxPriceCents:
-                "max" in q && q.max !== undefined
-                    ? Math.round(q.max * 100)
-                    : undefined,
-            sort: q.sort,
-            limit: q.limit,
-            nextCursor: "nextCursor" in q ? q.nextCursor : undefined,
-            prevCursor: "prevCursor" in q ? q.prevCursor : undefined,
-        }),
+        pagePromise,
         getCategories(),
-        userId ? getWishlistIds(userId) : Promise.resolve(new Set<string>()),
+        q && userId
+            ? getWishlistIds(userId)
+            : Promise.resolve(new Set<string>()),
     ]);
 
-    // Generate navigation URLs while preserving all active filters.
-    const previousUrl = getPaginationUrl(raw, "prevCursor", page.prevCursor);
-    const nextUrl = getPaginationUrl(raw, "nextCursor", page.nextCursor);
+    // Build pagination links only from the validated query that produced this page.
+    const previousUrl =
+        q && page
+            ? getPaginationUrl(q, "prevCursor", page.prevCursor)
+            : undefined;
+    const nextUrl =
+        q && page
+            ? getPaginationUrl(q, "nextCursor", page.nextCursor)
+            : undefined;
 
     return (
         <div className="space-y-6">
@@ -103,20 +91,21 @@ export default async function ProductsPage({
 
             <ProductFilters
                 categories={categories}
-                values={{
-                    q: q.q,
-                    category: "category" in q ? q.category : undefined,
-                    min: "min" in q ? q.min : undefined,
-                    max: "max" in q ? q.max : undefined,
-                    sort: q.sort,
-                }}
+                values={filterValues}
+                validationErrors={validationErrors}
             />
 
-            <ProductGrid
-                products={page.items}
-                wishlistIds={wishlistIds}
-                signedIn={Boolean(userId)}
-            />
+            {page ? (
+                <ProductGrid
+                    products={page.items}
+                    wishlistIds={wishlistIds}
+                    signedIn={Boolean(userId)}
+                />
+            ) : (
+                <p className="text-sm text-slate" role="status">
+                    Correct the invalid values and apply the filters again.
+                </p>
+            )}
 
             {/* Bidirectional pagination controls. */}
             {(previousUrl || nextUrl) && (

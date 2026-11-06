@@ -1,13 +1,15 @@
 import * as categoriesRepo from "@/lib/db/categories.repo";
 import * as productsRepo from "@/lib/db/products.repo";
-import { ConflictError, NotFoundError } from "@/lib/errors";
-import { isNaturalNumber } from "@/lib/utils";
+import { NotFoundError, ValidationError } from "@/lib/errors";
+import { assertValidPriceRange, isNaturalNumber } from "@/lib/utils";
 import type { Category, Page, Product, ProductQuery } from "@/types";
 
 /** Searches/filters the catalogue. */
 export async function searchProducts(
     query: ProductQuery,
 ): Promise<Page<Product>> {
+    // Enforce the price range for every caller before the repository builds a query.
+    assertValidPriceRange(query.minPriceCents, query.maxPriceCents);
     return productsRepo.queryProducts(query);
 }
 
@@ -16,7 +18,7 @@ export async function getFeaturedProducts(
     limit: number = 4,
 ): Promise<Product[]> {
     if (!isNaturalNumber(limit))
-        throw new ConflictError(`Invalid limit ${limit}!`);
+        throw new ValidationError(`Invalid limit ${limit}!`);
     return (
         await productsRepo.queryProducts({
             limit: limit,
@@ -28,7 +30,7 @@ export async function getFeaturedProducts(
 /** Newest products for the "new arrivals" shelf. */
 export async function getNewArrivals(limit: number = 4): Promise<Product[]> {
     if (!isNaturalNumber(limit))
-        throw new ConflictError(`Invalid limit ${limit}!`);
+        throw new ValidationError(`Invalid limit ${limit}!`);
     return (await productsRepo.queryProducts({ limit })).items;
 }
 

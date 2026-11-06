@@ -1,5 +1,5 @@
 import { API_LIMIT, PAGE_SIZE } from "@/lib/constants";
-import { ConflictError, ValidationError } from "@/lib/errors";
+import { ValidationError } from "@/lib/errors";
 import type {
     Page,
     Product,
@@ -260,7 +260,7 @@ export async function getRelated(
         categorySlug: `eq.${product.categorySlug}`,
         id: `neq.${product.id}`,
         order: "createdAt.desc,id.desc",
-        limit: String(Math.max(0, Math.trunc(limit))),
+        limit: String(limit),
     });
     const rows = await dataApi<ProductRow[]>("Product", {
         access: "anonymous",

@@ -1,7 +1,7 @@
 export const SITE_NAME = "Parcel";
 export const MAX_QTY_PER_ITEM = 100; // anti-abuse cap on a single cart line
 export const STOCK_WARNING_THRESHOLD = 5; //if the stock is below this value a warning will appear for this product
-export const PAGE_SIZE = 4; // products per listing page
+export const PAGE_SIZE = 1; // products per listing page; set to 1 to test pagination
 export const PRODUCT_ID_PATTERN = /^[a-zA-Z0-9_-]+(?:-[a-zA-Z0-9_-]+)*$/;
 export const API_LIMIT = 100;
 export const MAX_PRODUCT_ID_LENGTH = 100;
