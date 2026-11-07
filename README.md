@@ -17,19 +17,35 @@ A storefront where users browse and search products, keep a cart and a wishlist,
 
 Next.js App Router, React, TypeScript, Tailwind CSS, Neon Managed Auth, Neon Data API, Prisma for schema/admin tooling, zod, and Vitest.
 
-## Architecture
+## Architecture diagrams
 
-```text
-Browser -> Next.js (RSC pages, Server Actions, Route Handlers)
-        -> Services (business rules)      src/services
-        -> Neon Auth (session and short-lived JWT for signed-in requests)
-        -> Neon Data API (HTTPS; unauthenticated catalogue requests use its anonymous role)
-        -> PostgreSQL grants and RLS policies
-```
+- [Component architecture](Architecture.md)
+- [Application sequence](ApplicationSequence.md)
 
-The User table is an app-profile mapping with a random internal UUID primary key and a unique Neon Auth subject. Neon Auth owns passwords and sessions in its managed neon_auth schema. The SQL migration installs per-user policies for the profile, cart, and wishlist; category and product rows are publicly readable. A narrowly scoped database function creates or returns the mapping using the authenticated Data API JWT subject as the identity source.
+### Project structure
 
-All runtime database requests go through the Neon Data API. The server sends the current user's Neon Auth JWT for private data; public catalogue requests omit the Authorization header and use the Data API's anonymous role. The Data API validates signed-in JWTs and PostgreSQL applies grants and RLS policies. The application does not need a database connection string at runtime.
+| Path                                                   | Responsibility                                                      |
+| ------------------------------------------------------ | ------------------------------------------------------------------- |
+| `src/app/`                                             | App Router pages, loading/error UI, and Route Handlers under `api/` |
+| `src/components/`                                      | Reusable storefront, account, cart, and wishlist UI                 |
+| `src/actions/`                                         | Server Actions for authentication, cart, and wishlist interactions  |
+| `src/services/`                                        | Business rules and orchestration across repositories                |
+| `src/lib/db/`                                          | Neon Data API client and table-specific repositories                |
+| `src/lib/auth/`, `src/lib/api/`, `src/lib/validation/` | Auth/session helpers, API infrastructure, and input schemas         |
+| `src/types/`                                           | Shared domain and API types                                         |
+| `prisma/`                                              | Prisma schema and SQL setup for row-level security and user mapping |
+| `scripts/`                                             | Local tooling, including sample catalog seeding                     |
+
+### Database access and mutations
+
+| Data                    | Read                                                    | Create                                                                      | Update                                                 | Delete                                                      |
+| ----------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
+| Products and categories | Public catalog pages and endpoints through the Data API | Seed tooling using Prisma                                                   | Seed tooling using Prisma upserts                      | Database owner tooling; no storefront delete flow           |
+| User mapping            | Current authenticated user's mapping                    | `get_or_create_app_user()` RPC, called with the signed-in JWT               | Not supported by the app                               | Not supported by the app                                    |
+| Cart items              | Cart page and `/api/cart`                               | Add-to-cart Server Action or `POST /api/cart`                               | Quantity Server Action or `PATCH /api/cart/:productId` | Remove Server Action or `DELETE /api/cart/:productId`       |
+| Wishlist items          | Wishlist page and `/api/wishlist`                       | Wishlist Server Action or `POST /api/wishlist` (duplicate adds are ignored) | Not applicable                                         | Wishlist Server Action or `DELETE /api/wishlist/:productId` |
+
+Cart and wishlist records are protected by PostgreSQL RLS policies that scope access to the signed-in user's app mapping. Product and category data are readable by anonymous and authenticated roles; catalog writes are reserved for owner tooling.
 
 ## Environment variables
 
@@ -69,6 +85,23 @@ After schema or function changes, refresh the Data API schema cache in the Neon 
 
 Useful scripts: pnpm run typecheck, pnpm run test, pnpm run lint, and pnpm run build.
 
+## Verification
+
+Run the same checks locally that the GitHub Actions workflow runs:
+
+```bash
+pnpm run test
+pnpm run lint
+pnpm run typecheck
+pnpm run build
+```
+
+The workflow in `.github/workflows/node.js.yaml` installs from the frozen lockfile and runs build, tests, lint, and TypeScript checks for pushes and pull requests targeting `main`.
+
+## Deployment
+
+The demo is hosted at [tynoc-e-commerce-three.vercel.app](https://tynoc-e-commerce-three.vercel.app/). For another deployment, configure `NEON_DATA_API_URL`, `NEON_AUTH_BASE_URL`, and `NEON_AUTH_COOKIE_SECRET` in the hosting provider's server environment. Configure Upstash credentials as well to enable login and registration rate limiting. Keep `DIRECT_URL` out of the deployed app; it is only needed by local Prisma setup and seed commands. The Neon Auth allowed origins must include the deployed site, and the Auth URL and Data API URL must refer to the same Neon branch and database. Follow the Neon setup steps above to provision database roles, schema, RLS policies, and the app-user mapping function before using a new branch.
+
 ## API reference
 
 GET /api/products,
@@ -100,5 +133,7 @@ POST /api/auth/register.
 ## Limitations
 
 Currency currently only supports USD.
+
 No Captcha or password reset.
+
 No pagination for cart and wishlist pages -> intentional. Many commercial applications (such as Steam) only implement a single vertical list for these features.
