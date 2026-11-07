@@ -35,6 +35,7 @@ export async function registerUser(input: RegisterInput): Promise<User> {
         name: input.name,
     });
     if (error) {
+    console.log(error);
         const code = errorCode(error).toUpperCase();
         if (code.includes("USER_ALREADY_EXISTS") || code.includes("EMAIL_ALREADY_EXISTS"))
             throw new ConflictError("An account with this email already exists");
@@ -52,6 +53,7 @@ export async function verifyCredentials(
     password: string,
 ): Promise<User | null> {
     const { data, error } = await auth.signIn.email({ email, password });
+    if(error)console.log(error)
     if (error || !data?.user) return null;
     return toPublicUser(data.user as AuthUser);
 }
