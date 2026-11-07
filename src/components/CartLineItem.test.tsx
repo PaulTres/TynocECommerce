@@ -43,7 +43,7 @@ const line = (quantity = 2, stock = 5, exceedsStock = false) => ({
 
 describe("CartLineItem", () => {
     it("renders product details", () => {
-        render(<CartLineItem line={line(2, 3, true) as any} />);
+        render(<CartLineItem line={line(2, 3, false) as any} />);
         expect(
             screen
                 .getByRole("link", { name: "Ceramic mug" })
@@ -53,14 +53,14 @@ describe("CartLineItem", () => {
             screen.getByTestId("product-image").getAttribute("data-src"),
         ).toBe("/placeholder.svg");
         expect(
-            screen.getByText(
+            screen.queryByText(
                 "Only 3 in stock - reduce the quantity to continue.",
             ),
-        ).not.toBeTruthy();
+        ).toBeNull();
         expect(screen.getByText("$24.00")).toBeTruthy();
         expect(
             screen.getByLabelText("Increase quantity") as HTMLButtonElement,
-        ).toBe(true);
+        ).toBeTruthy();
         expect(
             (screen.getByLabelText("Increase quantity") as HTMLButtonElement)
                 .disabled,

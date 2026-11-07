@@ -1,6 +1,6 @@
 # Parcel Store
 
-A full-stack storefront where users browse and search products, keep a cart and a wishlist, and authenticate with Neon Managed Auth.
+A storefront where users browse and search products, keep a cart and a wishlist, and authenticate with Neon Managed Auth.
 
 [Demo](https://tynoc-e-commerce-three.vercel.app/)
 
@@ -101,3 +101,4 @@ POST /api/auth/register.
 
 Currency currently only supports USD.
 No Captcha or password reset.
+No pagination for cart and wishlist pages -> intentional. Many commercial applications (such as Steam) only implement a single vertical list for these features.
