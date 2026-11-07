@@ -60,7 +60,7 @@ Cart and wishlist records are protected by PostgreSQL RLS policies that scope ac
 ## Neon setup
 
 1. In Neon, select the branch and database used by this app.
-2. Enable Neon Managed Auth and configure the allowed origins for local development and the deployed site.
+2. Enable Neon Managed Auth and configure the allowed origins for local development and the deployed site. Add these links in branch->settings->BetterAuth->Domains. Use https and no trailing slash.
 3. Enable the Data API for that same branch and database. Select Managed Better Auth as its JWT provider.
 4. Leave the Data API option to grant broad public-schema access unchecked. The SQL migration grants only the table operations this app needs.
 5. In Data API advanced settings, keep Exposed schemas set to public only and the anonymous role set to anonymous. The managed neon_auth schema must not be exposed.
