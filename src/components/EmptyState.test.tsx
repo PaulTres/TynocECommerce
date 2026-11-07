@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { EmptyState } from "./EmptyState";
 
 vi.mock("next/link", () => ({
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     default: ({ href, children, ...props }: any) => (
         <a href={href} {...props}>
             {children}
